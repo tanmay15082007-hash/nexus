@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyan">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NEXUS</title>
+  <meta name="description" content="Holographic Command Deck & Daily Task Operations">
+  <meta name="theme-color" content="#030712">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NEXUS">
+
+  <!-- Relative PWA manifest & icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+
+  <!-- Relative CSS stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/effects.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       BOOT ANIMATION OVERLAY (< 1.5s, skippable)
+       ======================================================================== -->
+  <div id="nexus-boot-overlay" aria-live="polite">
+    <div class="boot-content">
+      <div class="boot-core-glyph">
+        <div class="boot-core-inner"></div>
+      </div>
+      <div class="boot-text">STARTING NEXUS... READY</div>
+      <div class="boot-subtext">[ COMMAND CORE ONLINE // QUANTUM ENCRYPTION ACTIVE ]</div>
+      <button type="button" id="boot-skip-btn" class="boot-skip-btn">[ SKIP ]</button>
+    </div>
+  </div>
+
+  <div class="nexus-app-shell">
+
+    <!-- ========================================================================
+         OVERDUE ALERT STRIP (Unfinished Tasks From Past Days)
+         ======================================================================== -->
+    <div id="overdue-alert-strip" class="overdue-alert-strip">
+      <div class="overdue-content">
+        <span class="overdue-count-pill" id="overdue-count-indicator">0</span>
+        <span>You have unfinished tasks from previous days</span>
+      </div>
+      <button type="button" id="overdue-resolve-action-btn" class="overdue-action-btn">Move to Today</button>
+    </div>
+
+    <!-- ========================================================================
+         MINIMAL TOP COMMAND BAR
+         ======================================================================== -->
+    <header class="top-command-bar">
+      <!-- Left: Brand Logo & Moniker Greeting -->
+      <div class="top-bar-left">
+        <div class="top-bar-brand" id="top-bar-brand" title="NEXUS Command Deck">
+          <div class="nexus-core-orb-btn" style="width: 32px; height: 32px;">
+            <svg viewBox="0 0 24 24" class="core-orb-glyph" style="width: 14px; height: 14px;">
+              <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"></polygon>
+            </svg>
+          </div>
+          <div class="top-bar-brand-title">NEXUS <span>CORE</span></div>
+        </div>
+
+        <div class="top-bar-greeting-wrap">
+          <div class="greeting-text" id="top-bar-greeting-text">Good morning, <span class="user-moniker">Commander</span></div>
+          <div class="greeting-stardate" id="top-bar-stardate">COMMAND CYCLE ACTIVE</div>
+        </div>
+      </div>
+
+      <!-- Center: Live Digital Clock & Date -->
+      <div class="top-bar-center">
+        <div class="top-clock" id="top-bar-clock">00:00:00</div>
+        <div class="top-date" id="top-bar-date">FRI // 06 NOV 2026</div>
+      </div>
+
+      <!-- Right: Quick-Access Icons & Central Core Orb -->
+      <div class="top-bar-right">
+        <!-- Quick Calendar -->
+        <button type="button" id="btn-quick-calendar" class="top-quick-btn" title="Calendar (C)" aria-label="Open Calendar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </button>
+
+        <!-- Quick Transfer Tasks -->
+        <button type="button" id="btn-quick-transfer" class="top-quick-btn" title="Transfer Tasks" aria-label="Transfer Tasks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </button>
+
+        <!-- Quick Recurring -->
+        <button type="button" id="btn-quick-recurring" class="top-quick-btn" title="Recurring Routines (R)" aria-label="Recurring Tasks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+
+        <!-- Desktop Core Orb Button -> Opens Holographic Command Hub -->
+        <button type="button" class="nexus-core-orb-btn" id="desktop-core-orb" title="Open Command Hub (Ctrl+K)" aria-label="Command Hub">
+          <span class="core-orb-pulse-ring"></span>
+          <svg viewBox="0 0 24 24" class="core-orb-glyph">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ========================================================================
+         VIEW SCREEN 1: HOME = TODAY ONLY
+         ======================================================================== -->
+    <main class="nexus-view-screen" data-screen="home">
+      <div class="home-screen-wrap">
+
+        <!-- Centerpiece Donut Chart Card -->
+        <div class="holo-card home-centerpiece-card" id="home-centerpiece-card">
+          <div class="home-chart-label">Today's Progress</div>
+          <div id="home-donut-container">
+            <!-- Dynamically populated holographic SVG donut -->
+          </div>
+        </div>
+
+        <!-- Stat Chips Row -->
+        <div class="stat-chips-row">
+          <div class="stat-chip stat-total">
+            <div class="stat-chip-num" id="stat-chip-total">0</div>
+            <div class="stat-chip-label">Total</div>
+          </div>
+          <div class="stat-chip stat-done">
+            <div class="stat-chip-num" id="stat-chip-done">0</div>
+            <div class="stat-chip-label">Done</div>
+          </div>
+          <div class="stat-chip stat-pending">
+            <div class="stat-chip-num" id="stat-chip-pending">0</div>
+            <div class="stat-chip-label">Pending</div>
+          </div>
+          <div class="stat-chip stat-overdue">
+            <div class="stat-chip-num" id="stat-chip-overdue">0</div>
+            <div class="stat-chip-label">Overdue</div>
+          </div>
+        </div>
+
+        <!-- Natural Language Quick Add Field -->
+        <div class="home-quick-add-wrap">
+          <form id="home-quick-add-form" class="quick-add-form">
+            <input type="text" id="home-quick-add-input" class="quick-add-main-input" placeholder="Add a task... try &quot;gym tomorrow 6pm high&quot;" required aria-label="Task title" autocomplete="off">
+            <div class="quick-add-tools">
+              <input type="time" id="home-quick-add-time" class="quick-add-time-input" aria-label="Scheduled time">
+              <select id="home-quick-add-priority" class="quick-add-priority-select" aria-label="Priority">
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </form>
+          <!-- NLP Preview chips (populated by JS) -->
+          <div id="nlp-preview-chips" class="nlp-preview-chips" style="display:none;"></div>
+        </div>
+
+        <!-- Search & Filter Strip (hidden until tasks exist) -->
+        <div class="home-filters-strip" id="home-filters-strip" style="display:none;">
+          <input type="text" id="home-search-input" class="home-search-input" placeholder="Search tasks...">
+          <div style="display: flex; gap: 6px;">
+            <select id="home-filter-priority" class="home-filter-select">
+              <option value="all">All Priorities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select id="home-filter-status" class="home-filter-select">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="done">Complete</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tasks List (Today ONLY) -->
+        <div id="home-tasks-container" class="home-tasks-list">
+          <!-- Dynamically populated floating rows -->
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ========================================================================
+         VIEW SCREEN 2: WEEK BOARD (HORIZONTAL TIMELINE LANES)
+         ======================================================================== -->
+    <section class="nexus-view-screen" data-screen="week" style="display: none;">
+      <div class="week-board-screen-wrap">
+        <div class="week-timeline-header">
+          <div>
+            <h2 class="display-font" style="font-size: 15px;">WEEK TIMELINE BOARD</h2>
+            <span style="font-size: 11px; color: var(--text-dim);" id="week-timeline-range-label">06 NOV – 12 NOV</span>
+          </div>
+          <div class="timeline-nav-group">
+            <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-secondary" id="week-timeline-prev-btn">◀ PREV</button>
+            <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-primary" id="week-timeline-today-btn">TODAY</button>
+            <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-secondary" id="week-timeline-next-btn">NEXT ▶</button>
+          </div>
+        </div>
+
+        <div id="week-board-lanes-container" class="week-lanes-container">
+          <!-- Dynamically populated horizontal lanes per day -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         VIEW SCREEN 3: CUSTOM LISTS
+         ======================================================================== -->
+    <section class="nexus-view-screen" data-screen="lists" style="display: none;">
+      <div class="custom-lists-screen-wrap">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <h2 class="display-font" style="font-size: 15px;">CUSTOM DIRECTIVE LISTS</h2>
+            <span style="font-size: 11px; color: var(--text-dim);">Non-date bound idea backlogs, equipment logs, and projects</span>
+          </div>
+          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-primary" onclick="window.NexusApp.UI.renderCustomListsScreen(); window.NexusApp.UI.promptCreateNewList ? window.NexusApp.UI.promptCreateNewList() : null">+ CREATE LIST</button>
+        </div>
+
+        <div id="custom-lists-screen-container">
+          <!-- Dynamically populated or empty state -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         VIEW SCREEN 4: TELEMETRY & STATS
+         ======================================================================== -->
+    <section class="nexus-view-screen" data-screen="stats" style="display: none;">
+      <div class="home-screen-wrap">
+        <h2 class="display-font" style="font-size: 15px; margin-bottom: 16px;">PRODUCTIVITY STATS</h2>
+
+        <div class="holo-card" style="padding: 16px; margin-bottom: 16px;">
+          <h4 class="display-font" style="font-size: 12px; margin-bottom: 10px;">7-DAY VELOCITY PROFILE</h4>
+          <div id="telemetry-barchart-container"></div>
+        </div>
+
+        <div class="holo-card" style="padding: 16px; margin-bottom: 16px;">
+          <h4 class="display-font" style="font-size: 12px; margin-bottom: 10px;">30-DAY TACTICAL MATRIX</h4>
+          <div id="telemetry-heatmap-container"></div>
+        </div>
+
+        <div class="stat-chips-row">
+          <div class="stat-chip">
+            <div class="stat-chip-num" id="stat-cur-streak">0 DAYS</div>
+            <div class="stat-chip-label">Current Streak</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-num" id="stat-best-streak">0 DAYS</div>
+            <div class="stat-chip-label">Best Streak</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-num" id="stat-overall-rate">0%</div>
+            <div class="stat-chip-label">Completion Rate</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-chip-num" id="stat-best-day">TUESDAY</div>
+            <div class="stat-chip-label">Most Productive</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mobile Floating Core Orb (Center) -->
+    <button type="button" class="nexus-core-orb-btn mobile-floating-orb" id="mobile-core-orb" aria-label="Open Command Hub">
+      <span class="core-orb-pulse-ring"></span>
+      <svg viewBox="0 0 24 24" class="core-orb-glyph" style="width: 24px; height: 24px;">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+      </svg>
+    </button>
+
+    <!-- Mobile Floating Quick-Add Action Button (+) -->
+    <button type="button" class="nexus-btn nexus-btn-primary" id="mobile-fab-add" style="display: none; position: fixed; bottom: 20px; right: 18px; width: 48px; height: 48px; border-radius: 50%; padding: 0; z-index: 999; box-shadow: 0 4px 18px var(--primary-glow);" aria-label="Add Task">
+      <span style="font-size: 22px;">+</span>
+    </button>
+
+  </div>
+
+  <!-- ========================================================================
+       THE COMMAND HUB (Key Radial / Orbital Full-Screen Hologram)
+       ======================================================================== -->
+  <div id="command-hub-overlay" class="command-hub-overlay" role="dialog" aria-modal="true" aria-labelledby="hub-main-title">
+    <div class="hub-modal-wrapper">
+      <div class="hub-header">
+        <div class="hub-title-wrap">
+          <div class="nexus-core-orb-btn" style="width: 28px; height: 28px;">
+            <svg viewBox="0 0 24 24" class="core-orb-glyph" style="width: 12px; height: 12px;"><circle cx="12" cy="12" r="3"></circle></svg>
+          </div>
+          <div>
+            <h3 id="hub-main-title" class="hub-title">COMMAND HUB</h3>
+            <span class="hub-sub">NEXUS CENTRAL SUBSYSTEM ACCESS</span>
+          </div>
+        </div>
+        <button type="button" id="hub-close-btn" class="row-tool-btn" style="font-size: 20px;" aria-label="Close Hub">×</button>
+      </div>
+
+      <div class="hub-search-bar">
+        <input type="text" id="hub-quick-filter-input" class="hub-filter-input" placeholder="Filter command nodes or press Ctrl+K for palette...">
+      </div>
+
+      <div id="command-hub-nodes-grid" class="hub-nodes-container">
+        <!-- 12 Orbital Animated Nodes dynamically populated by js/hub.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       COMMAND PALETTE MODAL (Ctrl / Cmd + K)
+       ======================================================================== -->
+  <div id="command-palette-modal" class="command-palette-modal" role="dialog" aria-modal="true">
+    <div class="palette-dialog">
+      <div class="palette-input-wrap">
+        <span class="palette-input-icon">❯</span>
+        <input type="text" id="palette-search-input" class="palette-search-field" placeholder="Type a command or action..." autocomplete="off">
+        <kbd style="font-size: 10px; color: var(--text-dim); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">ESC</kbd>
+      </div>
+      <div id="palette-results-list" class="palette-results-list">
+        <!-- Filtered results -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 1: CALENDAR (Browse Any Day)
+       ======================================================================== -->
+  <div id="panel-calendar" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">TACTICAL CALENDAR</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body">
+        <div class="cal-nav-bar">
+          <div class="cal-month-stepper">
+            <button type="button" class="cal-arrow-btn" id="cal-prev-btn" aria-label="Previous month" title="Previous month" onclick="window.NexusApp.Calendar.prevMonth()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div id="calendar-month-title" class="cal-month-title">November 2026</div>
+            <button type="button" class="cal-arrow-btn" id="cal-next-btn" aria-label="Next month" title="Next month" onclick="window.NexusApp.Calendar.nextMonth()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+          <button type="button" class="cal-today-btn" id="cal-today-btn" onclick="window.NexusApp.Calendar.jumpToToday()">Today</button>
+        </div>
+
+        <div id="calendar-grid-container"></div>
+        <div id="calendar-day-inspector" class="cal-day-summary" style="margin-top: 18px;"></div>
+      </div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="window.NexusApp.Calendar.jumpToToday()">JUMP TO TODAY</button>
+        <button type="button" class="nexus-btn nexus-btn-primary panel-close-btn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 2: TRANSFER TASKS
+       ======================================================================== -->
+  <div id="panel-transfer" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">TRANSFER TASKS</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body">
+        <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Carry over unfinished directives to today or a future date with source telemetry.</p>
+
+        <div class="form-field">
+          <label class="form-label" for="transfer-mode-select">Transfer Source Scope</label>
+          <select id="transfer-mode-select" class="form-input">
+            <option value="allPast">All Pending (All Past Days)</option>
+            <option value="lastWeek">Last Week's Pending (Past 7 Days)</option>
+            <option value="specific">From a Specific Day</option>
+          </select>
+        </div>
+
+        <div class="form-field" id="transfer-specific-date-wrap" style="display: none;">
+          <label class="form-label" for="transfer-source-date">Source Date</label>
+          <input type="date" id="transfer-source-date" class="form-input">
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span class="form-label" style="margin: 0;">Directives Selection Preview</span>
+          <button type="button" id="transfer-select-all-btn" class="nexus-btn nexus-btn-xs nexus-btn-secondary">SELECT ALL</button>
+        </div>
+
+        <div id="transfer-preview-list" style="border: 1px solid var(--primary-border); border-radius: var(--radius-sm); max-height: 220px; overflow-y: auto; padding: 6px; margin-bottom: 14px; background: rgba(3,7,18,0.6);"></div>
+
+        <div class="form-field">
+          <label class="form-label" for="transfer-target-date">Destination Target Date</label>
+          <input type="date" id="transfer-target-date" class="form-input">
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Transfer Operation</label>
+          <div style="display: flex; gap: 20px; margin-top: 4px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="radio" name="transfer-action-type" value="move" checked>
+              <span>MOVE (Remove from old date)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="radio" name="transfer-action-type" value="copy">
+              <span>COPY (Retain original date)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-secondary panel-close-btn">CANCEL</button>
+        <button type="button" id="transfer-execute-btn" class="nexus-btn nexus-btn-primary">EXECUTE TRANSFER</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 3: RECURRING TASKS
+       ======================================================================== -->
+  <div id="panel-recurring" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">RECURRING ROUTINES</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body">
+        <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Establish repeating directives. Completions are tracked independently for each day with zero cross-day leakage.</p>
+
+        <h4 class="form-label">Active Recurring Routines</h4>
+        <div id="recurring-templates-list" style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;"></div>
+
+        <h4 class="form-label">Configure New Routine</h4>
+        <form id="new-recurring-form">
+          <div class="form-field">
+            <input type="text" id="rec-title-input" class="form-input" placeholder="Routine title..." required>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="form-label" for="rec-type-select">Frequency</label>
+              <select id="rec-type-select" class="form-input">
+                <option value="daily">Daily</option>
+                <option value="weekdays">Weekdays Only (Mon–Fri)</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="rec-time-input">Time (Optional)</label>
+              <input type="time" id="rec-time-input" class="form-input">
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="form-label" for="rec-priority-select">Priority</label>
+              <select id="rec-priority-select" class="form-input">
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="rec-tag-select">Category</label>
+              <select id="rec-tag-select" class="form-input">
+                <option value="work">Work</option>
+                <option value="dev">Development</option>
+                <option value="fitness">Fitness</option>
+                <option value="research">Research</option>
+                <option value="personal">Personal</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="form-label" for="rec-start-date">Effective Start Date</label>
+              <input type="date" id="rec-start-date" class="form-input" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="rec-end-date">End Date (Optional)</label>
+              <input type="date" id="rec-end-date" class="form-input">
+            </div>
+          </div>
+          <button type="submit" class="nexus-btn nexus-btn-primary" style="width: 100%;">+ ACTIVATE ROUTINE</button>
+        </form>
+      </div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-secondary panel-close-btn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 4: FOCUS POMODORO TIMER
+       ======================================================================== -->
+  <div id="panel-timer" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">FOCUS TIMER</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <div id="timer-task-badge" style="font-family: var(--font-mono); font-size: 11px; color: var(--primary); background: var(--primary-faint); padding: 3px 10px; border-radius: 4px; margin-bottom: 16px;">
+          NO TARGET BOUND
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-secondary" onclick="window.NexusApp.Timer.setMode('focus')">FOCUS (25M)</button>
+          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-secondary" onclick="window.NexusApp.Timer.setMode('shortBreak')">SHORT (5M)</button>
+          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-secondary" onclick="window.NexusApp.Timer.setMode('longBreak')">LONG (15M)</button>
+        </div>
+
+        <!-- SVG Circular Ring -->
+        <div style="position: relative; width: 180px; height: 180px; margin-bottom: 20px;">
+          <svg viewBox="0 0 160 160" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+            <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(34, 211, 238, 0.1)" stroke-width="8"></circle>
+            <circle id="timer-progress-ring" cx="80" cy="80" r="70" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round"></circle>
+          </svg>
+          <div id="timer-time-display" class="display-font" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; font-weight: 800;">25:00</div>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button type="button" id="timer-start-btn" class="nexus-btn nexus-btn-primary" style="min-width: 110px;" onclick="window.NexusApp.Timer.toggle()">ENGAGE</button>
+          <button type="button" class="nexus-btn nexus-btn-secondary" onclick="window.NexusApp.Timer.reset()">RESET</button>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-secondary panel-close-btn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 5: SETTINGS CONSOLE (7 Tabs)
+       ======================================================================== -->
+  <div id="panel-settings" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">SYSTEM SETTINGS</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+
+      <div class="settings-tabs-header">
+        <button type="button" class="settings-tab-btn active" data-tab="tab-profile">Profile</button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-appearance">Appearance</button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-time">Time & Week</button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-audio">Sound & Motion</button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-notifications">Alerts</button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-backup">Data & Backup</button>
+      </div>
+
+      <form id="settings-deck-form" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+        <div class="panel-body">
+          
+          <!-- Tab 1: Profile -->
+          <div id="tab-profile" class="settings-tab-pane">
+            <div class="form-field">
+              <label class="form-label" for="set-profile-name">Command Moniker / Name</label>
+              <input type="text" id="set-profile-name" class="form-input" placeholder="Commander">
+              <span style="font-size: 11px; color: var(--text-dim); margin-top: 4px; display: block;">Used in the main deck greeting.</span>
+            </div>
+          </div>
+
+          <!-- Tab 2: Appearance -->
+          <div id="tab-appearance" class="settings-tab-pane" style="display: none;">
+            <div class="form-field">
+              <label class="form-label" for="set-accent-color">Holographic Glow Palette</label>
+              <select id="set-accent-color" class="form-input">
+                <option value="cyan">Cyan (Default)</option>
+                <option value="violet">Violet</option>
+                <option value="gold">Gold</option>
+                <option value="green">Green</option>
+                <option value="red">Red</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tab 3: Time & Week -->
+          <div id="tab-time" class="settings-tab-pane" style="display: none;">
+            <div class="form-field">
+              <label class="form-label" for="set-time-format">Time Display Format</label>
+              <select id="set-time-format" class="form-input">
+                <option value="24">24-Hour (14:30)</option>
+                <option value="12">12-Hour (2:30 PM)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="set-week-start">Week Starts On</label>
+              <select id="set-week-start" class="form-input">
+                <option value="mon">Monday</option>
+                <option value="sun">Sunday</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tab 4: Sound & Motion -->
+          <div id="tab-audio" class="settings-tab-pane" style="display: none;">
+            <div class="form-field">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" id="set-sound-enabled">
+                <span>Enable Synthesized UI Audio Beeps</span>
+              </label>
+              <span style="font-size: 11px; color: var(--text-dim); margin-top: 4px; display: block;">Short Web Audio tones on completion, deletion and navigation.</span>
+            </div>
+            <div class="form-field" style="margin-top: 14px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" id="set-anim-enabled" checked>
+                <span>Enable Rotating Rings & Particle Bursts</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Tab 5: Alerts -->
+          <div id="tab-notifications" class="settings-tab-pane" style="display: none;">
+            <div class="form-field">
+              <label class="form-label">System Notifications</label>
+              <button type="button" class="nexus-btn nexus-btn-secondary" style="width: 100%;" onclick="window.NexusApp.PWA.requestNotificationPermission()">
+                AUTHORIZE BROWSER NOTIFICATIONS
+              </button>
+              <span style="font-size: 11px; color: var(--text-dim); margin-top: 6px; display: block;">
+                Note: Background notifications on static sites are limited by browser push capabilities. In-app audio and visual banners remain fully active.
+              </span>
+            </div>
+          </div>
+
+          <!-- Tab 6: Data & Backup -->
+          <div id="tab-backup" class="settings-tab-pane" style="display: none;">
+            <div class="form-field">
+              <label class="form-label">Data Safety & Persistence</label>
+              <p style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px;">
+                All tasks, routines, and custom lists persist strictly in this browser's <code>localStorage</code>. Backups are strongly recommended.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" id="btn-export-backup" class="nexus-btn nexus-btn-secondary" style="flex: 1;">EXPORT JSON BACKUP</button>
+                <button type="button" id="btn-import-backup" class="nexus-btn nexus-btn-secondary" style="flex: 1;">IMPORT FROM JSON</button>
+                <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;">
+              </div>
+            </div>
+
+            <div class="form-field" style="border-top: 1px solid var(--primary-border); padding-top: 16px; margin-top: 20px;">
+              <label class="form-label" style="color: var(--holo-red);">Danger Zone</label>
+              <button type="button" id="btn-reset-database" class="nexus-btn nexus-btn-danger" style="width: 100%;">
+                PURGE ALL TELEMETRY & RESET DATABASE
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel-footer">
+          <button type="button" class="nexus-btn nexus-btn-secondary panel-close-btn">CANCEL</button>
+          <button type="submit" class="nexus-btn nexus-btn-primary">APPLY CONFIGURATION</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 6: KEYBOARD SHORTCUTS HELP (?)
+       ======================================================================== -->
+  <div id="panel-shortcuts" class="nexus-slide-panel" role="dialog" aria-modal="true">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title">KEYBOARD SHORTCUTS</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body">
+        <div style="display: grid; grid-template-columns: 90px 1fr; gap: 12px; font-size: 12px; align-items: center;">
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">N</kbd>
+          <span>Initialize new directive</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">T</kbd>
+          <span>Navigate to Today's screen</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">C</kbd>
+          <span>Open Tactical Calendar</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">R</kbd>
+          <span>Open Recurring Routines</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">/</kbd>
+          <span>Focus search filter field</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">Ctrl + K</kbd>
+          <span>Open Command Palette & Hub</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">Ctrl + Z</kbd>
+          <span>Undo last task deletion or transfer</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">?</kbd>
+          <span>Toggle this shortcuts deck</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">Esc</kbd>
+          <span>Close open hub, palette, or slide panel</span>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-primary panel-close-btn">ACKNOWLEDGE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TASK EDIT / CREATE DIALOG MODAL
+       ======================================================================== -->
+  <div id="task-edit-dialog-modal" class="nexus-dialog-modal" role="dialog" aria-modal="true">
+    <div class="dialog-box">
+      <div class="panel-header">
+        <h3 id="task-dialog-header-title" class="panel-title">TASK</h3>
+        <button type="button" class="task-dialog-close row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <form id="task-edit-dialog-form">
+        <div class="panel-body">
+          <input type="hidden" id="modal-task-id">
+
+          <div class="form-field">
+            <label class="form-label" for="modal-task-title">Task Title *</label>
+            <input type="text" id="modal-task-title" class="form-input" placeholder="What do you need to do?" required>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="form-label" for="modal-task-date">Assigned Date</label>
+              <input type="date" id="modal-task-date" class="form-input" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="modal-task-time">Scheduled Time (Optional)</label>
+              <input type="time" id="modal-task-time" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label class="form-label" for="modal-task-priority">Priority Level</label>
+              <select id="modal-task-priority" class="form-input">
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="modal-task-tag">Category / Tag</label>
+              <select id="modal-task-tag" class="form-input">
+                <option value="work">Work</option>
+                <option value="dev">Development</option>
+                <option value="fitness">Fitness</option>
+                <option value="research">Research</option>
+                <option value="personal">Personal</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="modal-task-notes">Briefing Notes</label>
+            <textarea id="modal-task-notes" class="form-input" rows="2" placeholder="Operational details, parameters, notes..."></textarea>
+          </div>
+
+          <!-- Subtask Checkpoints -->
+          <div class="form-field">
+            <label class="form-label">Subtask Checkpoints</label>
+            <div style="border: 1px solid var(--primary-border); border-radius: var(--radius-sm); padding: 8px; background: rgba(3,7,18,0.5);">
+              <div id="modal-subtasks-checklist"></div>
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <input type="text" id="modal-subtask-input" placeholder="+ Add checkpoint..." style="font-size: 11px; flex: 1;">
+                <button type="button" id="modal-subtask-add-btn" class="nexus-btn nexus-btn-xs nexus-btn-secondary">ADD</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <button type="button" class="nexus-btn nexus-btn-secondary task-dialog-close">CANCEL</button>
+          <button type="submit" class="nexus-btn nexus-btn-primary">SAVE DIRECTIVE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TOAST NOTIFICATION (Undo Toast)
+       ======================================================================== -->
+  <div id="nexus-toast" class="nexus-toast" role="status" aria-live="polite">
+    <span id="toast-text" class="toast-text">Directive Updated</span>
+    <button type="button" id="toast-undo-btn" class="toast-undo-btn">UNDO</button>
+  </div>
+
+
+  <!-- ========================================================================
+       MOBILE BOTTOM NAV BAR (mobile only, hidden on desktop)
+       ======================================================================== -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Main navigation" role="navigation">
+    <button type="button" class="bottom-nav-btn" data-nav-screen="home" aria-label="Today" title="Today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Today</span>
+    </button>
+    <button type="button" class="bottom-nav-btn" data-nav-panel="panel-calendar" aria-label="Calendar" title="Calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <span>Calendar</span>
+    </button>
+    <!-- Center raised Add button -->
+    <button type="button" class="bottom-nav-btn bottom-nav-add" id="mobile-bottom-add-btn" aria-label="Add task" title="Add task">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+    <button type="button" class="bottom-nav-btn" data-nav-screen="stats" aria-label="Stats" title="Stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+        <line x1="18" y1="20" x2="18" y2="10"></line>
+        <line x1="12" y1="20" x2="12" y2="4"></line>
+        <line x1="6" y1="20" x2="6" y2="14"></line>
+      </svg>
+      <span>Stats</span>
+    </button>
+    <button type="button" class="bottom-nav-btn bottom-nav-hub" id="mobile-bottom-hub-btn" aria-label="Hub" title="Command Hub">
+      <div class="bottom-nav-orb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+        </svg>
+      </div>
+      <span>Hub</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================================
+       SCRIPTS (Pure Vanilla JS - Zero Build Step, Zero npm)
+       ======================================================================== -->
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/dates.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/recurring.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/transfer.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/hub.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/pwa.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
