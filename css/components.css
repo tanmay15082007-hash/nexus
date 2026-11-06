@@ -1381,4 +1381,17 @@
 @media (max-width: 480px) {
   .hub-install-text small { display: none; }
 }
+.stat-chip-num,
+.holo-pct-text,
+.holo-count-text,
+.top-clock,
+.top-date,
+.cal-date-num,
+.lane-date-num,
+.list-counter,
+.cal-summary-stats,
+.chip-time {
+  font-family: var(--font-body);
+  font-variant-numeric: lining-nums;
+}
 }
