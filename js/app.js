@@ -97,19 +97,38 @@ window.NexusApp.App = (function() {
 
     // Mobile FAB (+)
     const mobileFab = document.getElementById('mobile-fab-add');
-    if (mobileFab) {
-      mobileFab.addEventListener('click', () => {
-        UI.openTaskEditModal();
-      });
-    }
+    if (mobileFab) mobileFab.addEventListener('click', () => UI.openTaskEditModal());
 
-    // Mobile bottom nav "Add" button
+    // Mobile bottom nav: Add (+)
     const bottomAdd = document.getElementById('mobile-bottom-add-btn');
-    if (bottomAdd) {
-      bottomAdd.addEventListener('click', () => {
-        UI.openTaskEditModal();
+    if (bottomAdd) bottomAdd.addEventListener('click', () => UI.openTaskEditModal());
+
+    // Mobile bottom nav: Hub
+    const bottomHub = document.getElementById('mobile-bottom-hub-btn');
+    if (bottomHub) bottomHub.addEventListener('click', () => Hub.toggleHub());
+
+    // Mobile bottom nav: Today and Stats (switch screens)
+    document.querySelectorAll('.bottom-nav-btn[data-nav-screen]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        State.setCurrentScreen(btn.getAttribute('data-nav-screen'));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    // Mobile bottom nav: Calendar (opens a panel)
+    document.querySelectorAll('.bottom-nav-btn[data-nav-panel]').forEach(btn => {
+      btn.addEventListener('click', () => Hub.openSlidePanel(btn.getAttribute('data-nav-panel')));
+    });
+
+    // Highlight the active tab (Today / Stats)
+    function syncBottomNav() {
+      const current = State.getCurrentScreen();
+      document.querySelectorAll('.bottom-nav-btn[data-nav-screen]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-nav-screen') === current);
       });
     }
+    State.subscribe(syncBottomNav);
+    syncBottomNav();
   }
 
   function setupKeyboardShortcuts() {
