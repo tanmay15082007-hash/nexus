@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS Icon Generator</title>
+<style>
+  body { background: #030712; color: #22d3ee; font-family: monospace; padding: 24px; }
+  button { background: #22d3ee; color: #030712; border: none; padding: 10px 24px; font-size: 14px; cursor: pointer; border-radius: 6px; margin: 8px 4px; font-weight: 700; }
+  button:hover { background: #a855f7; color: #fff; }
+  #status { margin-top: 16px; font-size: 12px; line-height: 1.8; color: #94a3b8; }
+  canvas { display: none; }
+  img { width: 128px; height: 128px; border: 1px solid #22d3ee; margin: 8px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<h2 style="margin-bottom: 16px;">NEXUS Icon PNG Generator</h2>
+<p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">Click each button to download the icon at that size. Place the downloaded files in assets/icons/.</p>
+<button onclick="gen(32,'favicon-32.png',false)">favicon-32.png</button>
+<button onclick="gen(180,'apple-touch-icon.png',false)">apple-touch-icon.png (180)</button>
+<button onclick="gen(192,'icon-192.png',false)">icon-192.png</button>
+<button onclick="gen(512,'icon-512.png',false)">icon-512.png</button>
+<button onclick="gen(512,'icon-512-maskable.png',true)">icon-512-maskable.png</button>
+<button onclick="genAll()">Generate ALL</button>
+<div id="status"></div>
+<canvas id="c"></canvas>
+
+<script>
+const svgSrc = `./icon.svg`;
+
+async function gen(size, filename, maskable) {
+  const status = document.getElementById('status');
+  status.textContent += `Generating ${filename}...\n`;
+
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('c');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+
+      if (maskable) {
+        ctx.fillStyle = '#030712';
+        ctx.fillRect(0, 0, size, size);
+        const pad = size * 0.1;
+        const inner = size * 0.8;
+        ctx.drawImage(img, pad, pad, inner, inner);
+      } else {
+        ctx.drawImage(img, 0, 0, size, size);
+      }
+
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        status.textContent += `✓ Downloaded: ${filename}\n`;
+        resolve();
+      }, 'image/png');
+    };
+    img.onerror = (e) => {
+      status.textContent += `✗ Failed: ${filename} - ${e}\n`;
+      resolve();
+    };
+    img.src = svgSrc + '?t=' + Date.now();
+  });
+}
+
+async function genAll() {
+  await gen(32, 'favicon-32.png', false);
+  await new Promise(r => setTimeout(r, 300));
+  await gen(180, 'apple-touch-icon.png', false);
+  await new Promise(r => setTimeout(r, 300));
+  await gen(192, 'icon-192.png', false);
+  await new Promise(r => setTimeout(r, 300));
+  await gen(512, 'icon-512.png', false);
+  await new Promise(r => setTimeout(r, 300));
+  await gen(512, 'icon-512-maskable.png', true);
+  document.getElementById('status').textContent += '\n✅ All icons generated! Copy them to assets/icons/ and reload NEXUS.';
+}
+</script>
+</body>
+</html>

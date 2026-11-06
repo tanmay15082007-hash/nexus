@@ -1,0 +1,108 @@
+/**
+ * NEXUS - Holographic CSS Variables & Theme Palettes
+ * Holographic Command Deck: Deep Space Background, Cyan/Violet/Magenta Accents
+ */
+/* Plain-zero digits: the display and mono fonts use slashed zeros.
+   These faces apply ONLY to the characters 0-9 and fall back to a clean system font. */
+@font-face {
+  font-family: 'NexusNum';
+  font-style: normal;
+  font-weight: 100 599;
+  src: local('Arial'), local('Helvetica Neue'), local('Roboto'), local('Segoe UI');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'NexusNum';
+  font-style: normal;
+  font-weight: 600 900;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Helvetica Neue Bold'), local('HelveticaNeue-Bold'),
+       local('Roboto Bold'), local('Roboto-Bold'), local('Segoe UI Bold'), local('SegoeUI-Bold');
+  unicode-range: U+0030-0039;
+}
+:root {
+  /* Deep Space Canvas */
+  --bg-space: #030712;
+  --bg-deep: #080d1a;
+  --bg-panel: rgba(11, 18, 32, 0.72);
+  --bg-panel-elevated: rgba(15, 23, 42, 0.85);
+  --bg-card: rgba(15, 23, 42, 0.6);
+  --bg-input: rgba(8, 14, 26, 0.8);
+
+  /* Holographic Accents (Default: Cyan to Violet) */
+  --holo-cyan: #22d3ee;
+  --holo-cyan-glow: rgba(34, 211, 238, 0.4);
+  --holo-cyan-faint: rgba(34, 211, 238, 0.12);
+  --holo-cyan-border: rgba(34, 211, 238, 0.28);
+
+  --holo-violet: #a855f7;
+  --holo-violet-glow: rgba(168, 85, 247, 0.4);
+  --holo-magenta: #ec4899;
+  --holo-gold: #f59e0b;
+  --holo-red: #ef4444;
+  --holo-red-glow: rgba(239, 68, 68, 0.45);
+  --holo-green: #10b981;
+  --holo-green-glow: rgba(16, 185, 129, 0.4);
+
+  /* Active Theme References */
+  --primary: var(--holo-cyan);
+  --primary-glow: var(--holo-cyan-glow);
+  --primary-faint: var(--holo-cyan-faint);
+  --primary-border: var(--holo-cyan-border);
+  --secondary: var(--holo-violet);
+
+  /* Typography Colors */
+  --text-main: #e2e8f0;
+  --text-bright: #ffffff;
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Fonts */
+  --font-display: 'NexusNum', 'Orbitron', 'Michroma', 'Sora', sans-serif;
+  --font-mono: 'NexusNum', 'Consolas', 'Fira Code', monospace;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Glassmorphism & Radii */
+  --glass-blur: blur(16px);
+  --shadow-holo: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--primary-faint);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+
+  /* Touch & Layout Targets */
+  --touch-target-min: 44px;
+  --top-bar-height: 60px;
+}
+
+/* Palette Variations via Settings */
+[data-theme="violet"] {
+  --primary: var(--holo-violet);
+  --primary-glow: var(--holo-violet-glow);
+  --primary-faint: rgba(168, 85, 247, 0.12);
+  --primary-border: rgba(168, 85, 247, 0.35);
+  --secondary: var(--holo-magenta);
+}
+
+[data-theme="gold"] {
+  --primary: var(--holo-gold);
+  --primary-glow: rgba(245, 158, 11, 0.4);
+  --primary-faint: rgba(245, 158, 11, 0.12);
+  --primary-border: rgba(245, 158, 11, 0.35);
+  --secondary: #fb923c;
+}
+
+[data-theme="green"] {
+  --primary: var(--holo-green);
+  --primary-glow: var(--holo-green-glow);
+  --primary-faint: rgba(16, 185, 129, 0.12);
+  --primary-border: rgba(16, 185, 129, 0.35);
+  --secondary: var(--holo-cyan);
+}
+
+[data-theme="red"] {
+  --primary: var(--holo-red);
+  --primary-glow: var(--holo-red-glow);
+  --primary-faint: rgba(239, 68, 68, 0.12);
+  --primary-border: rgba(239, 68, 68, 0.35);
+  --secondary: #f43f5e;
+}

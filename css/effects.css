@@ -1,0 +1,292 @@
+/**
+ * NEXUS - Holographic Effects, Core Orb, Donut Animations & Boot Sequence
+ */
+
+/* Holographic Glass Panel */
+.holo-panel {
+  position: relative;
+  background: var(--bg-panel);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid transparent;
+  border-image: linear-gradient(135deg, var(--primary) 0%, rgba(168, 85, 247, 0.4) 100%) 1;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-holo);
+  padding: 18px;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+/* Rounded Holographic Panel Alternative (border-image cannot do border-radius in some browsers) */
+.holo-card {
+  position: relative;
+  background: var(--bg-panel);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary-faint);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.holo-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 20px var(--primary-glow);
+}
+
+/* ==========================================================================
+   THE CORE ORB BUTTON (Key Command Hub Trigger)
+   ========================================================================== */
+.nexus-core-orb-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #22d3ee 0%, #a855f7 60%, #030712 100%);
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 0 16px var(--primary-glow), inset 0 0 10px rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+}
+
+.nexus-core-orb-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px var(--primary-glow), inset 0 0 14px #ffffff;
+}
+
+.nexus-core-orb-btn:active {
+  transform: scale(0.94);
+}
+
+.core-orb-pulse-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 1px dashed var(--primary);
+  opacity: 0.5;
+  animation: spinClockwise 12s linear infinite;
+  pointer-events: none;
+}
+
+.core-orb-glyph {
+  width: 18px;
+  height: 18px;
+  stroke: #ffffff;
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+
+/* Mobile Floating Core Orb at bottom-center */
+.mobile-floating-orb {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  z-index: 1000;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.8), 0 0 25px var(--primary-glow);
+}
+
+.mobile-floating-orb:active {
+  transform: translateX(-50%) scale(0.92);
+}
+
+/* ==========================================================================
+   HOLOGRAPHIC DONUT CHART
+   ========================================================================== */
+.holo-donut-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 230px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+.holo-donut-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.holo-ring-outer {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 4, 12;
+  opacity: 0.45;
+  transform-origin: 110px 110px;
+  animation: spinClockwise 28s linear infinite;
+}
+
+.holo-ring-mid {
+  fill: none;
+  stroke: var(--secondary);
+  stroke-width: 1;
+  stroke-dasharray: 12, 8;
+  opacity: 0.35;
+  transform-origin: 110px 110px;
+  animation: spinCounter 20s linear infinite;
+}
+
+.holo-track {
+  fill: none;
+  stroke: rgba(34, 211, 238, 0.08);
+  stroke-width: 13;
+}
+
+.holo-progress {
+  fill: none;
+  stroke-width: 13;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 110px 110px;
+  transition: stroke-dashoffset 0.65s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s;
+}
+
+.holo-ring-inner {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1;
+  stroke-dasharray: 2, 8;
+  opacity: 0.3;
+  transform-origin: 110px 110px;
+  animation: spinClockwise 36s linear infinite;
+}
+
+.holo-pct-text {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  fill: var(--text-bright);
+  text-shadow: 0 0 12px var(--primary-glow);
+}
+
+.holo-count-text {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  fill: var(--text-dim);
+}
+
+.holo-status-text {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  fill: var(--primary);
+}
+
+@keyframes spinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinCounter {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* ==========================================================================
+   BOOT ANIMATION OVERLAY (< 1.5s, skippable)
+   ========================================================================== */
+#nexus-boot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100000;
+  background-color: var(--bg-space);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+#nexus-boot-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.boot-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.boot-core-glyph {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px dashed var(--primary);
+  box-shadow: 0 0 25px var(--primary-glow), inset 0 0 15px var(--primary-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spinClockwise 3s linear infinite;
+}
+
+.boot-core-inner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary) 0%, var(--secondary) 100%);
+  animation: pulseGlow 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.boot-text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.16em;
+  color: var(--text-bright);
+  text-shadow: 0 0 12px var(--primary-glow);
+}
+
+.boot-subtext {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--primary);
+  letter-spacing: 0.08em;
+}
+
+.boot-skip-btn {
+  margin-top: 10px;
+  padding: 5px 14px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+
+.boot-skip-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Particle sparks */
+.nexus-particle-spark {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+}
