@@ -1,7 +1,7 @@
 /**
  * NEXUS - PWA & Offline Service Worker Controller
- * Registers the service worker and powers the "Download NEXUS" card in the Command Hub.
- * The card is Android-only. There is no install banner and no iOS sheet.
+ * Registers the service worker, shows a "New version available" bar after updates,
+ * and powers the "Download NEXUS" card in the Command Hub (Android only).
  */
 
 window.NexusApp = window.NexusApp || {};
@@ -15,17 +15,42 @@ window.NexusApp.PWA = (function() {
   }
 
   function registerServiceWorker() {
-    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => {
-            console.log('[NEXUS PWA] Service Worker registered:', reg.scope);
-          })
-          .catch(err => {
-            console.warn('[NEXUS PWA] SW registration failed:', err);
+    if (!('serviceWorker' in navigator) || !window.location.protocol.startsWith('http')) return;
+
+    // Only announce updates if the page was already controlled by an older worker
+    const hadController = Boolean(navigator.serviceWorker.controller);
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => {
+          console.log('[NEXUS PWA] Service Worker registered:', reg.scope);
+          // Look for a new version whenever the app returns to the foreground
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) reg.update().catch(() => {});
           });
-      });
-    }
+          setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+        })
+        .catch(err => console.warn('[NEXUS PWA] SW registration failed:', err));
+    });
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) showUpdateNotice();
+    });
+  }
+
+  function showUpdateNotice() {
+    if (document.getElementById('nx-update-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'nx-update-bar';
+    bar.className = 'nx-update-bar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = `
+      <span>New version available.</span>
+      <button type="button" class="nexus-btn nexus-btn-primary nexus-btn-sm" id="nx-update-btn">TAP TO REFRESH</button>
+      <button type="button" class="row-tool-btn" id="nx-update-dismiss" aria-label="Dismiss">×</button>`;
+    document.body.appendChild(bar);
+    document.getElementById('nx-update-btn').addEventListener('click', () => window.location.reload());
+    document.getElementById('nx-update-dismiss').addEventListener('click', () => bar.remove());
   }
 
   // True only on Android devices
@@ -79,7 +104,6 @@ window.NexusApp.PWA = (function() {
       if (window.location.protocol === 'file:') {
         toast('Open the hosted https link (not the local file) to install.');
       } else {
-        // Android browsers without a native prompt (or in-app browsers)
         toast('Open this link in Chrome, then menu > Install app.');
       }
       return;
