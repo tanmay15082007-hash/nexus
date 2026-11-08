@@ -1,7 +1,7 @@
 /**
  * NEXUS - Primary UI & View Renderer
- * Manages Home (Today Only), Week Board (Horizontal Timeline Lanes), Custom Lists,
- * slide-in panels, floating task rows, drag-and-drop, swipe gestures, particle bursts, and toasts.
+ * Home (Today Only, Focus 3), Week Board, Custom Lists (rename/hide/reorder),
+ * recurring editor, slide-in panels, task rows, drag-and-drop, touch swipe, toasts.
  */
 
 window.NexusApp = window.NexusApp || {};
@@ -24,8 +24,17 @@ window.NexusApp.UI = (function() {
     setupTaskEditModal();
     setupSettingsTabs();
 
-    State.subscribe((state, changeType, meta) => {
-      renderActiveScreen();
+    // Batched rendering: many changes in a row become one render per frame
+    let renderQueued = false;
+    let renderDirty = false;
+    State.subscribe(() => {
+      if (document.hidden) { renderDirty = true; return; }   // skip work while the tab is hidden
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(() => { renderQueued = false; renderActiveScreen(); });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && renderDirty) { renderDirty = false; renderActiveScreen(); }
     });
 
     renderActiveScreen();
@@ -72,7 +81,7 @@ window.NexusApp.UI = (function() {
     }
 
     if (subtitleEl) {
-      subtitleEl.style.display = 'none'; // date now shows only in the clock block
+      subtitleEl.style.display = 'none'; // date shows only in the clock block
     }
 
     if (clockEl) {
@@ -124,6 +133,7 @@ window.NexusApp.UI = (function() {
 
     if (tasks.length === 0) {
       const hasTasksButFiltered = stats.total > 0;
+      listEl.dataset.sig = '';
       listEl.innerHTML = `
         <div class="empty-state-card">
           <div class="empty-state-core-icon">
@@ -147,13 +157,30 @@ window.NexusApp.UI = (function() {
       return;
     }
 
-    listEl.innerHTML = tasks.map(t => renderTaskFloatingRow(t, today, 'home')).join('');
-    attachTaskRowListeners(listEl);
+    // Focus 3: pinned tasks first, shown larger
+    const Ex = window.NexusApp.Extras;
+    const pinIds = Ex ? Ex.getPins(today) : [];
+    const pinned = tasks.filter(t => pinIds.includes(t.id));
+    const others = tasks.filter(t => !pinIds.includes(t.id));
+
+    let html = '';
+    if (pinned.length) {
+      html += '<div class="focus3-label">★ FOCUS 3</div>';
+      html += pinned.map(t => renderTaskFloatingRow(t, today, 'home')).join('');
+      if (others.length) html += '<div class="focus3-label focus3-label-dim">OTHER TASKS</div>';
+    }
+    html += others.map(t => renderTaskFloatingRow(t, today, 'home')).join('');
+
+    // Only touch the DOM when the markup actually changed
+    if (listEl.dataset.sig !== html) {
+      listEl.dataset.sig = html;
+      listEl.innerHTML = html;
+      attachTaskRowListeners(listEl);
+    }
   }
 
   /* ========================================================================
      SCREEN 2: WEEK BOARD (HORIZONTAL TIMELINE LANES)
-     Original layout: lanes per day, shifting window, drag between days
      ======================================================================== */
   function renderWeekBoardScreen() {
     const container = document.getElementById('week-board-lanes-container');
@@ -209,15 +236,13 @@ window.NexusApp.UI = (function() {
   }
 
   /* ========================================================================
-     SCREEN 3: CUSTOM LISTS (NON-DATE BOUND)
-     Starts COMPLETELY EMPTY on first run
+     SCREEN 3: CUSTOM LISTS (rename, hide, reorder)
      ======================================================================== */
   function renderCustomListsScreen() {
     const container = document.getElementById('custom-lists-screen-container');
     if (!container) return;
 
-    const stateData = State.getData();
-    const lists = stateData.lists || [];
+    const lists = State.getData().lists || [];
 
     if (lists.length === 0) {
       container.innerHTML = `
@@ -239,58 +264,74 @@ window.NexusApp.UI = (function() {
       return;
     }
 
-    let listsHtml = '<div class="custom-lists-deck-grid">';
-    lists.forEach(list => {
-      if (list.hidden) return;
-      const completed = list.items.filter(i => i.done).length;
-      const total = list.items.length;
+    const visible = lists.filter(l => !l.hidden);
+    const hidden = lists.filter(l => l.hidden);
+    let html = '';
 
-      listsHtml += `
-        <div class="custom-list-card" data-list-id="${list.id}">
-          <div class="list-card-header">
-            <div class="list-title-wrap">
-              <h3 class="list-title">${escapeHTML(list.name)}</h3>
-              <span class="list-counter">${completed}/${total}</span>
-            </div>
-            <div class="list-tools">
-              <button type="button" class="list-del-btn" data-list-id="${list.id}" title="Delete list" aria-label="Delete list">×</button>
-            </div>
-          </div>
-
-          <div class="list-items-body">
-            ${list.items.map(item => `
-              <div class="custom-list-row ${item.done ? 'is-done' : ''}" data-item-id="${item.id}">
-                <button type="button" class="list-row-check ${item.done ? 'checked' : ''}" data-list-id="${list.id}" data-item-id="${item.id}" aria-label="Toggle">
-                  <span class="check-dot"></span>
-                </button>
-                <span class="list-row-text">${escapeHTML(item.text)}</span>
-                <div class="list-row-actions">
-                  <button type="button" class="list-row-promote-btn" data-list-id="${list.id}" data-item-id="${item.id}" title="Promote to Today's Task" aria-label="Promote">→</button>
-                  <button type="button" class="list-row-delete-btn" data-list-id="${list.id}" data-item-id="${item.id}" title="Remove item" aria-label="Delete">×</button>
-                </div>
+    if (visible.length === 0) {
+      html += '<div class="empty-state-card"><h4>All lists are hidden.</h4><p>Use the buttons below to show a list again.</p></div>';
+    } else {
+      html += '<div class="custom-lists-deck-grid">';
+      visible.forEach((list, vIdx) => {
+        const completed = list.items.filter(i => i.done).length;
+        const total = list.items.length;
+        html += `
+          <div class="custom-list-card" data-list-id="${list.id}">
+            <div class="list-card-header">
+              <div class="list-title-wrap">
+                <h3 class="list-title">${escapeHTML(list.name)}</h3>
+                <span class="list-counter">${completed}/${total}</span>
               </div>
-            `).join('')}
-            ${list.items.length === 0 ? '<div class="empty-list-lane">List is empty</div>' : ''}
-          </div>
+              <div class="list-tools">
+                <button type="button" class="list-tool-btn list-move-btn" data-list-id="${list.id}" data-dir="-1" ${vIdx === 0 ? 'disabled' : ''} title="Move earlier" aria-label="Move list earlier">◀</button>
+                <button type="button" class="list-tool-btn list-move-btn" data-list-id="${list.id}" data-dir="1" ${vIdx === visible.length - 1 ? 'disabled' : ''} title="Move later" aria-label="Move list later">▶</button>
+                <button type="button" class="list-tool-btn list-rename-btn" data-list-id="${list.id}" title="Rename list" aria-label="Rename list">✎</button>
+                <button type="button" class="list-tool-btn list-hide-btn" data-list-id="${list.id}" title="Hide list" aria-label="Hide list">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                </button>
+                <button type="button" class="list-del-btn" data-list-id="${list.id}" title="Delete list" aria-label="Delete list">×</button>
+              </div>
+            </div>
 
-          <form class="add-custom-item-form" data-list-id="${list.id}">
-            <input type="text" class="add-custom-item-input" placeholder="+ Add item..." aria-label="Add item to ${list.name}">
-            <button type="submit" class="add-custom-item-submit" title="Add item">+</button>
-          </form>
-        </div>
-      `;
-    });
-    listsHtml += '</div>';
+            <div class="list-items-body">
+              ${list.items.map(item => `
+                <div class="custom-list-row ${item.done ? 'is-done' : ''}" data-item-id="${item.id}">
+                  <button type="button" class="list-row-check ${item.done ? 'checked' : ''}" data-list-id="${list.id}" data-item-id="${item.id}" aria-label="Toggle">
+                    <span class="check-dot"></span>
+                  </button>
+                  <span class="list-row-text">${escapeHTML(item.text)}</span>
+                  <div class="list-row-actions">
+                    <button type="button" class="list-row-promote-btn" data-list-id="${list.id}" data-item-id="${item.id}" title="Promote to Today's Task" aria-label="Promote">→</button>
+                    <button type="button" class="list-row-delete-btn" data-list-id="${list.id}" data-item-id="${item.id}" title="Remove item" aria-label="Delete">×</button>
+                  </div>
+                </div>`).join('')}
+              ${list.items.length === 0 ? '<div class="empty-list-lane">List is empty</div>' : ''}
+            </div>
 
-    container.innerHTML = listsHtml;
+            <form class="add-custom-item-form" data-list-id="${list.id}">
+              <input type="text" class="add-custom-item-input" placeholder="+ Add item..." aria-label="Add item to ${escapeHTML(list.name)}">
+              <button type="submit" class="add-custom-item-submit" title="Add item" aria-label="Add item">+</button>
+            </form>
+          </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (hidden.length) {
+      html += `<div class="hidden-lists-row"><span>HIDDEN LISTS:</span>${hidden.map(l =>
+        `<button type="button" class="nexus-btn nexus-btn-xs nexus-btn-secondary list-show-btn" data-list-id="${l.id}">SHOW ${escapeHTML(l.name)}</button>`).join('')}</div>`;
+    }
+
+    container.innerHTML = html;
     attachCustomListsDeckListeners(container);
   }
 
-  function promptCreateNewList() {
-    const name = prompt('Enter custom list name (e.g. Ideas, Groceries, Project Milestones):');
+  async function promptCreateNewList() {
+    const name = await window.NexusApp.Dialog.prompt('Give the new list a name (for example Ideas or Groceries).', {
+      title: 'NEW LIST', placeholder: 'List name', okLabel: 'CREATE'
+    });
     if (name && name.trim()) {
-      const stateData = State.getData();
-      stateData.lists.push({
+      State.getData().lists.push({
         id: window.NexusApp.Storage.generateUUID(),
         name: name.trim(),
         hidden: false,
@@ -302,41 +343,36 @@ window.NexusApp.UI = (function() {
   }
 
   function attachCustomListsDeckListeners(container) {
+    const findList = (id) => (State.getData().lists || []).find(l => l.id === id);
+
     // Checkbox toggle
     container.querySelectorAll('.list-row-check').forEach(btn => {
       btn.addEventListener('click', () => {
-        const listId = btn.getAttribute('data-list-id');
-        const itemId = btn.getAttribute('data-item-id');
-        const list = (State.getData().lists || []).find(l => l.id === listId);
-        if (list) {
-          const item = list.items.find(i => i.id === itemId);
-          if (item) {
-            item.done = !item.done;
-            if (Audio) Audio.click();
-            State.commit('listItemToggle');
-          }
+        const list = findList(btn.getAttribute('data-list-id'));
+        const item = list && list.items.find(i => i.id === btn.getAttribute('data-item-id'));
+        if (item) {
+          item.done = !item.done;
+          if (Audio) Audio.click();
+          State.commit('listItemToggle');
         }
       });
     });
 
-    // Form add item
+    // Add item
     container.querySelectorAll('.add-custom-item-form').forEach(form => {
       form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const listId = form.getAttribute('data-list-id');
+        const list = findList(form.getAttribute('data-list-id'));
         const input = form.querySelector('.add-custom-item-input');
-        if (input && input.value.trim() && listId) {
-          const list = (State.getData().lists || []).find(l => l.id === listId);
-          if (list) {
-            list.items.push({
-              id: window.NexusApp.Storage.generateUUID(),
-              text: input.value.trim(),
-              done: false
-            });
-            input.value = '';
-            if (Audio) Audio.click();
-            State.commit('listItemAdd');
-          }
+        if (list && input && input.value.trim()) {
+          list.items.push({
+            id: window.NexusApp.Storage.generateUUID(),
+            text: input.value.trim(),
+            done: false
+          });
+          input.value = '';
+          if (Audio) Audio.click();
+          State.commit('listItemAdd');
         }
       });
     });
@@ -344,21 +380,12 @@ window.NexusApp.UI = (function() {
     // Promote item to Today
     container.querySelectorAll('.list-row-promote-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const listId = btn.getAttribute('data-list-id');
-        const itemId = btn.getAttribute('data-item-id');
-        const list = (State.getData().lists || []).find(l => l.id === listId);
-        if (list) {
-          const item = list.items.find(i => i.id === itemId);
-          if (item) {
-            Tasks.addTask({
-              title: item.text,
-              date: Dates.getTodayStr(),
-              priority: 'high',
-              tag: 'work'
-            });
-            item.done = true;
-            showToast(`Promoted to Today: "${item.text}"`);
-          }
+        const list = findList(btn.getAttribute('data-list-id'));
+        const item = list && list.items.find(i => i.id === btn.getAttribute('data-item-id'));
+        if (item) {
+          Tasks.addTask({ title: item.text, date: Dates.getTodayStr(), priority: 'high', tag: 'work' });
+          item.done = true;
+          showToast(`Promoted to Today: "${item.text}"`);
         }
       });
     });
@@ -366,31 +393,80 @@ window.NexusApp.UI = (function() {
     // Delete item
     container.querySelectorAll('.list-row-delete-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const listId = btn.getAttribute('data-list-id');
-        const itemId = btn.getAttribute('data-item-id');
-        const list = (State.getData().lists || []).find(l => l.id === listId);
-        if (list) {
-          const idx = list.items.findIndex(i => i.id === itemId);
-          if (idx !== -1) {
-            list.items.splice(idx, 1);
-            State.commit('listItemDelete');
-          }
+        const list = findList(btn.getAttribute('data-list-id'));
+        if (!list) return;
+        const idx = list.items.findIndex(i => i.id === btn.getAttribute('data-item-id'));
+        if (idx !== -1) {
+          list.items.splice(idx, 1);
+          State.commit('listItemDelete');
         }
       });
     });
 
-    // Delete entire list
+    // Delete list
     container.querySelectorAll('.list-del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const listId = btn.getAttribute('data-list-id');
-        if (confirm('Delete this list and its items?')) {
-          const stateData = State.getData();
-          const idx = (stateData.lists || []).findIndex(l => l.id === listId);
-          if (idx !== -1) {
-            stateData.lists.splice(idx, 1);
-            State.commit('listDelete');
-          }
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-list-id');
+        const ok = await window.NexusApp.Dialog.confirm('Delete this list and all of its items?', {
+          title: 'DELETE LIST', okLabel: 'DELETE', danger: true
+        });
+        if (!ok) return;
+        const all = State.getData().lists;
+        const idx = all.findIndex(l => l.id === id);
+        if (idx !== -1) {
+          all.splice(idx, 1);
+          State.commit('listDelete');
         }
+      });
+    });
+
+    // Rename
+    container.querySelectorAll('.list-rename-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const list = findList(btn.getAttribute('data-list-id'));
+        if (!list) return;
+        const name = await window.NexusApp.Dialog.prompt('Rename this list.', {
+          title: 'RENAME LIST', value: list.name, okLabel: 'SAVE'
+        });
+        if (name && name.trim()) {
+          list.name = name.trim();
+          State.commit('listRename');
+        }
+      });
+    });
+
+    // Hide / show
+    container.querySelectorAll('.list-hide-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const list = findList(btn.getAttribute('data-list-id'));
+        if (list) {
+          list.hidden = true;
+          State.commit('listHide');
+          showToast(`Hidden "${list.name}". Use SHOW below to bring it back.`);
+        }
+      });
+    });
+    container.querySelectorAll('.list-show-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const list = findList(btn.getAttribute('data-list-id'));
+        if (list) {
+          list.hidden = false;
+          State.commit('listShow');
+        }
+      });
+    });
+
+    // Reorder (skips over hidden lists)
+    container.querySelectorAll('.list-move-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const all = State.getData().lists;
+        const idx = all.findIndex(l => l.id === btn.getAttribute('data-list-id'));
+        const dir = Number(btn.getAttribute('data-dir'));
+        let j = idx + dir;
+        while (j >= 0 && j < all.length && all[j].hidden) j += dir;
+        if (idx < 0 || j < 0 || j >= all.length) return;
+        const tmp = all[idx]; all[idx] = all[j]; all[j] = tmp;
+        State.commit('listReorder');
       });
     });
   }
@@ -415,25 +491,22 @@ window.NexusApp.UI = (function() {
   }
 
   /* ========================================================================
-     FLOATING TASK ROW COMPONENT (NOT Ruled Lines, NOT Boxed Cards)
-     Sleek floating row with glowing circular check node, priority left bar,
-     chips for time/priority/tag, and particle burst on completion
+     FLOATING TASK ROW COMPONENT
      ======================================================================== */
   function renderTaskFloatingRow(task, dateStr, context = 'home') {
     const isRecurring = Boolean(task.isRecurringInstance || task.recurringId);
     const subtaskStats = Tasks.getSubtaskStats(task);
     const settings = State.getSettings();
     const formattedTime = task.time ? Dates.formatTime(task.time, settings.timeFormat) : '';
+    const pinned = Boolean(window.NexusApp.Extras && window.NexusApp.Extras.isPinned(task.id, dateStr));
 
     return `
-      <div class="nexus-floating-task priority-${task.priority || 'medium'} ${task.done ? 'is-completed' : ''}" 
+      <div class="nexus-floating-task priority-${task.priority || 'medium'} ${task.done ? 'is-completed' : ''} ${pinned ? 'is-pinned' : ''}"
            data-task-id="${task.id}" data-date="${dateStr}" draggable="true" tabindex="0">
-        
-        <!-- Left priority accent bar is rendered via CSS border-left / pseudo-element -->
 
         <!-- Glowing circular check node -->
-        <button type="button" class="check-node ${task.done ? 'checked' : ''}" 
-                data-task-id="${task.id}" data-date="${dateStr}" 
+        <button type="button" class="check-node ${task.done ? 'checked' : ''}"
+                data-task-id="${task.id}" data-date="${dateStr}"
                 aria-label="Toggle complete: ${escapeHTML(task.title)}">
           <svg viewBox="0 0 20 20" class="check-node-svg">
             <polyline points="4 10 8 14 16 6"></polyline>
@@ -479,8 +552,10 @@ window.NexusApp.UI = (function() {
           </div>
         </div>
 
-        <!-- Task Action Tools (Hover on Desktop / Swipe on Mobile) -->
+        <!-- Task Action Tools (Hover on Desktop / always visible on touch) -->
         <div class="task-row-tools">
+          <button type="button" class="row-tool-btn pin-btn ${pinned ? 'is-on' : ''}" data-task-id="${task.id}" data-date="${dateStr}" aria-pressed="${pinned}" title="Pin to Focus 3" aria-label="Pin to Focus 3">★</button>
+          ${!isRecurring ? `<button type="button" class="row-tool-btn move-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Move to another day" aria-label="Move to another day">⇄</button>` : ''}
           <button type="button" class="row-tool-btn timer-btn" data-task-id="${task.id}" title="Focus on this directive" aria-label="Timer">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           </button>
@@ -546,6 +621,33 @@ window.NexusApp.UI = (function() {
         }
       });
     });
+
+    // Pin to Focus 3
+    container.querySelectorAll('.row-tool-btn.pin-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ex = window.NexusApp.Extras;
+        if (ex && ex.togglePin(btn.getAttribute('data-task-id'), btn.getAttribute('data-date'))) {
+          renderActiveScreen();
+        }
+      });
+    });
+
+    // Move to another day (works on touch, where drag and drop does not)
+    container.querySelectorAll('.row-tool-btn.move-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-task-id');
+        const from = btn.getAttribute('data-date');
+        const target = await window.NexusApp.Dialog.prompt('Move this task to which day?', {
+          title: 'MOVE TASK', type: 'date', value: Dates.addDays(from, 1), okLabel: 'MOVE'
+        });
+        if (target && target !== from) {
+          Tasks.moveTaskToDate(id, target);
+          showToast('Moved to ' + Dates.formatDisplayDate(target, 'short'));
+        }
+      });
+    });
   }
 
   /* ========================================================================
@@ -608,7 +710,7 @@ window.NexusApp.UI = (function() {
     }
 
     if (executeBtn) {
-      executeBtn.onclick = () => {
+      executeBtn.onclick = async () => {
         const selectedChecks = previewList.querySelectorAll('.transfer-item-check:checked');
         const taskIds = Array.from(selectedChecks).map(c => c.value);
         const targetDate = targetDateInput.value || Dates.getTodayStr();
@@ -616,7 +718,7 @@ window.NexusApp.UI = (function() {
         const actionType = actionRadio ? actionRadio.value : 'move';
 
         if (taskIds.length === 0) {
-          alert('Please select at least one task to transfer.');
+          await window.NexusApp.Dialog.alert('Select at least one task to transfer.', { title: 'NOTHING SELECTED' });
           return;
         }
 
@@ -624,7 +726,7 @@ window.NexusApp.UI = (function() {
         if (res.success) {
           window.NexusApp.Hub.closeSlidePanel('panel-transfer');
         } else {
-          alert(res.message);
+          await window.NexusApp.Dialog.alert(res.message, { title: 'TRANSFER FAILED' });
         }
       };
     }
@@ -632,21 +734,95 @@ window.NexusApp.UI = (function() {
     refreshPreview();
   }
 
+  // Streak + last 7 days for one recurring template
+  function recurringHistory(tpl) {
+    const Rec = window.NexusApp.Recurring;
+    const today = Dates.getTodayStr();
+    const doneMap = tpl.completions || {};
+    const scheduledOn = (d) => Rec.getInstancesForDate(d).some(x => x.recurringId === tpl.id);
+
+    const dots = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = Dates.addDays(today, -i);
+      dots.push({ d, scheduled: scheduledOn(d), done: Boolean(doneMap[d]) });
+    }
+
+    let streak = 0;
+    for (let i = 0; i < 120; i++) {
+      const d = Dates.addDays(today, -i);
+      if (!scheduledOn(d)) continue;      // days it does not run neither add nor break the streak
+      if (doneMap[d]) streak++;
+      else if (i === 0) continue;         // today is still in progress
+      else break;
+    }
+    return { dots, streak };
+  }
+
   function renderRecurringPanel() {
     const listEl = document.getElementById('recurring-templates-list');
     const form = document.getElementById('new-recurring-form');
     if (!listEl || !form) return;
 
+    const Dialog = window.NexusApp.Dialog;
+    const Rec = window.NexusApp.Recurring;
+    const $ = (id) => document.getElementById(id);
     const templates = State.getData().recurring || [];
+
+    const typeSel = $('rec-type-select');
+    const weeklyWrap = $('rec-weekly-wrap');
+    const monthlyWrap = $('rec-monthly-wrap');
+    const editId = $('rec-edit-id');
+    const submitBtn = $('rec-submit-btn');
+    const cancelBtn = $('rec-cancel-edit-btn');
+    const startInput = $('rec-start-date');
+
+    function syncType() {
+      weeklyWrap.style.display = typeSel.value === 'weekly' ? 'block' : 'none';
+      monthlyWrap.style.display = typeSel.value === 'monthly' ? 'block' : 'none';
+    }
+    function resetForm() {
+      form.reset();
+      editId.value = '';
+      submitBtn.textContent = '+ ACTIVATE ROUTINE';
+      cancelBtn.style.display = 'none';
+      startInput.value = Dates.getTodayStr();
+      syncType();
+    }
+    function startEdit(tpl) {
+      editId.value = tpl.id;
+      $('rec-title-input').value = tpl.title || '';
+      typeSel.value = tpl.repeat.type || 'daily';
+      $('rec-time-input').value = tpl.time || '';
+      $('rec-priority-select').value = tpl.priority || 'medium';
+      $('rec-tag-select').value = tpl.tag || 'work';
+      startInput.value = tpl.startDate || Dates.getTodayStr();
+      $('rec-end-date').value = tpl.endDate || '';
+      $('rec-month-day').value = tpl.repeat.dayOfMonth || 1;
+      const days = tpl.repeat.days || [];
+      form.querySelectorAll('#rec-day-picker input').forEach(cb => {
+        cb.checked = tpl.repeat.type === 'weekly' && days.includes(Number(cb.value));
+      });
+      submitBtn.textContent = 'SAVE CHANGES';
+      cancelBtn.style.display = 'inline-flex';
+      syncType();
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    typeSel.onchange = syncType;
+    cancelBtn.onclick = resetForm;
+    if (!startInput.value) startInput.value = Dates.getTodayStr();
+    syncType();
 
     if (templates.length === 0) {
       listEl.innerHTML = '<div class="empty-state-notice">No recurring routines established yet. Configure your first one below.</div>';
     } else {
       listEl.innerHTML = templates.map(tpl => {
+        const rep = tpl.repeat || { type: 'daily' };
         let repeatDesc = 'Daily';
-        if (tpl.repeat.type === 'weekdays') repeatDesc = 'Mon–Fri';
-        else if (tpl.repeat.type === 'weekly') repeatDesc = `Weekly on [${tpl.repeat.days.map(d => Dates.DAY_NAMES_SHORT[d]).join(', ')}]`;
-        else if (tpl.repeat.type === 'monthly') repeatDesc = `Monthly on day ${tpl.repeat.dayOfMonth}`;
+        if (rep.type === 'weekdays') repeatDesc = 'Mon–Fri';
+        else if (rep.type === 'weekly') repeatDesc = `Weekly on ${(rep.days || []).map(d => Dates.DAY_NAMES_SHORT[d]).join(', ')}`;
+        else if (rep.type === 'monthly') repeatDesc = `Monthly on day ${rep.dayOfMonth}`;
+        const hist = recurringHistory(tpl);
 
         return `
           <div class="recurring-template-card ${tpl.paused ? 'is-paused' : ''}">
@@ -659,57 +835,86 @@ window.NexusApp.UI = (function() {
               ${tpl.time ? `<span>Time: ${tpl.time}</span>` : ''}
               <span>Start: ${tpl.startDate}</span>
             </div>
+            <div class="rec-streak">
+              <span class="rec-flame" title="Current streak">🔥 ${hist.streak}</span>
+              <span class="rec-dots" aria-label="Last 7 days">${hist.dots.map(d =>
+                `<i class="rec-dot ${!d.scheduled ? 'off' : (d.done ? 'done' : 'miss')}" title="${d.d}"></i>`).join('')}</span>
+            </div>
             <div class="rec-card-actions">
+              <button type="button" class="nexus-btn nexus-btn-xs nexus-btn-secondary rec-edit-btn" data-id="${tpl.id}">EDIT</button>
               <button type="button" class="nexus-btn nexus-btn-xs nexus-btn-secondary rec-pause-btn" data-id="${tpl.id}">${tpl.paused ? 'RESUME' : 'PAUSE'}</button>
               <button type="button" class="nexus-btn nexus-btn-xs nexus-btn-danger rec-del-btn" data-id="${tpl.id}">DELETE</button>
             </div>
-          </div>
-        `;
+          </div>`;
       }).join('');
 
+      listEl.querySelectorAll('.rec-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tpl = templates.find(t => t.id === btn.getAttribute('data-id'));
+          if (tpl) startEdit(tpl);
+        });
+      });
       listEl.querySelectorAll('.rec-pause-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          window.NexusApp.Recurring.togglePauseTemplate(btn.getAttribute('data-id'));
+          Rec.togglePauseTemplate(btn.getAttribute('data-id'));
           renderRecurringPanel();
         });
       });
-
       listEl.querySelectorAll('.rec-del-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (confirm('Delete this recurring routine?')) {
-            window.NexusApp.Recurring.deleteTemplate(btn.getAttribute('data-id'));
+        btn.addEventListener('click', async () => {
+          const ok = await Dialog.confirm('Delete this recurring routine? Past completions are removed with it.', {
+            title: 'DELETE ROUTINE', okLabel: 'DELETE', danger: true
+          });
+          if (ok) {
+            Rec.deleteTemplate(btn.getAttribute('data-id'));
+            if (editId.value === btn.getAttribute('data-id')) resetForm();
             renderRecurringPanel();
           }
         });
       });
     }
 
-    form.onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
-      const title = document.getElementById('rec-title-input').value.trim();
-      const type = document.getElementById('rec-type-select').value;
-      const time = document.getElementById('rec-time-input').value;
-      const priority = document.getElementById('rec-priority-select').value;
-      const tag = document.getElementById('rec-tag-select').value;
-      const startDate = document.getElementById('rec-start-date').value || Dates.getTodayStr();
-      const endDate = document.getElementById('rec-end-date').value || null;
+      const title = $('rec-title-input').value.trim();
+      const type = typeSel.value;
+      const time = $('rec-time-input').value;
+      const priority = $('rec-priority-select').value;
+      const tag = $('rec-tag-select').value;
+      const startDate = startInput.value || Dates.getTodayStr();
+      const endDate = $('rec-end-date').value || null;
+      const picked = Array.from(form.querySelectorAll('#rec-day-picker input:checked')).map(cb => Number(cb.value));
+      const dayOfMonth = Math.min(31, Math.max(1, parseInt($('rec-month-day').value, 10) || 1));
 
       if (!title) return;
+      if (type === 'weekly' && picked.length === 0) {
+        await Dialog.alert('Pick at least one day of the week.', { title: 'REPEAT DAYS' });
+        return;
+      }
+      if (endDate && endDate < startDate) {
+        await Dialog.alert('The end date must be after the start date.', { title: 'DATE RANGE' });
+        return;
+      }
 
-      window.NexusApp.Recurring.createTemplate({
-        title,
-        time,
-        priority,
-        tag,
-        startDate,
-        endDate,
-        repeat: { type, days: [0, 1, 2, 3, 4, 5, 6], dayOfMonth: 1 }
-      });
+      const repeat = {
+        type,
+        days: type === 'weekly' ? picked : [0, 1, 2, 3, 4, 5, 6],
+        dayOfMonth: type === 'monthly' ? dayOfMonth : 1
+      };
 
-      form.reset();
-      document.getElementById('rec-start-date').value = Dates.getTodayStr();
+      if (editId.value) {
+        const tpl = (State.getData().recurring || []).find(r => r.id === editId.value);
+        if (tpl) {
+          Object.assign(tpl, { title, time, priority, tag, startDate, endDate, repeat });
+          State.commit('recurringUpdate');
+          showToast(`Recurring routine "${title}" updated`);
+        }
+      } else {
+        Rec.createTemplate({ title, time, priority, tag, startDate, endDate, repeat });
+        showToast(`Recurring routine "${title}" active`);
+      }
+      resetForm();
       renderRecurringPanel();
-      showToast(`Recurring routine "${title}" active`);
     };
   }
 
@@ -835,9 +1040,9 @@ window.NexusApp.UI = (function() {
 
     listEl.innerHTML = task.subtasks.map(st => `
       <div class="subtask-row ${st.done ? 'done' : ''}">
-        <input type="checkbox" class="subtask-checkbox" ${st.done ? 'checked' : ''} data-task-id="${task.id}" data-subtask-id="${st.id}">
+        <input type="checkbox" class="subtask-checkbox" ${st.done ? 'checked' : ''} data-task-id="${task.id}" data-subtask-id="${st.id}" aria-label="Toggle subtask">
         <span class="subtask-label">${escapeHTML(st.text)}</span>
-        <button type="button" class="subtask-remove-btn" data-task-id="${task.id}" data-subtask-id="${st.id}">×</button>
+        <button type="button" class="subtask-remove-btn" data-task-id="${task.id}" data-subtask-id="${st.id}" aria-label="Remove subtask">×</button>
       </div>
     `).join('');
 
@@ -856,7 +1061,7 @@ window.NexusApp.UI = (function() {
     });
   }
 
-  function saveTaskEditDialog() {
+  async function saveTaskEditDialog() {
     const taskId = document.getElementById('modal-task-id').value;
     const title = document.getElementById('modal-task-title').value.trim();
     const date = document.getElementById('modal-task-date').value;
@@ -871,7 +1076,16 @@ window.NexusApp.UI = (function() {
       const activeDate = State.getSelectedDate();
       const inst = window.NexusApp.Recurring.getInstancesForDate(activeDate).find(i => i.id === taskId);
       if (inst && inst.recurringId) {
-        if (confirm('Apply updates to ALL FUTURE DAYS? (Cancel for THIS DAY ONLY)')) {
+        const choice = await window.NexusApp.Dialog.choice('This is a recurring task. Apply your changes to:', {
+          title: 'RECURRING TASK',
+          options: [
+            { label: 'THIS DAY ONLY', value: 'day' },
+            { label: 'ALL FUTURE DAYS', value: 'all', primary: true },
+            { label: 'CANCEL', value: null }
+          ]
+        });
+        if (!choice) return;                       // cancelled, keep the dialog open
+        if (choice === 'all') {
           window.NexusApp.Recurring.updateTemplate(inst.recurringId, { title, time, priority, tag, notes });
         } else {
           window.NexusApp.Recurring.deleteInstanceChoice(inst.recurringId, activeDate, 'thisDay');
@@ -887,12 +1101,19 @@ window.NexusApp.UI = (function() {
     closeTaskEditModal();
   }
 
-  function promptRecurringDeleteChoice(recurringId, dateStr) {
-    const choice = confirm(`RECURRING ROUTINE DELETION:\n\nClick OK to delete for THIS DAY ONLY.\nClick CANCEL to END for ALL FUTURE DAYS.`);
-    if (choice) {
+  async function promptRecurringDeleteChoice(recurringId, dateStr) {
+    const choice = await window.NexusApp.Dialog.choice('Delete this recurring routine:', {
+      title: 'RECURRING TASK',
+      options: [
+        { label: 'THIS DAY ONLY', value: 'thisDay' },
+        { label: 'ALL FUTURE DAYS', value: 'allFuture', danger: true },
+        { label: 'CANCEL', value: null }
+      ]
+    });
+    if (choice === 'thisDay') {
       window.NexusApp.Recurring.deleteInstanceChoice(recurringId, dateStr, 'thisDay');
       showToast('Routine skipped for this date');
-    } else {
+    } else if (choice === 'allFuture') {
       window.NexusApp.Recurring.deleteInstanceChoice(recurringId, dateStr, 'allFuture');
       showToast('Routine ended for all future dates');
     }
@@ -950,38 +1171,56 @@ window.NexusApp.UI = (function() {
     });
   }
 
+  // Swipe that does not fight vertical scrolling: right = complete, left = delete (with Undo)
   function setupTouchGestures() {
-    let startX = 0;
-    let startY = 0;
-    let currentTaskRow = null;
+    let row = null, startX = 0, startY = 0, locked = false;
+
+    function reset() {
+      if (!row) return;
+      row.style.transform = '';
+      row.classList.remove('is-swiping', 'swipe-right', 'swipe-left');
+    }
 
     document.addEventListener('touchstart', (e) => {
-      const row = e.target.closest('.nexus-floating-task');
-      if (!row) return;
-      currentTaskRow = row;
+      const r = e.target.closest('.nexus-floating-task');
+      if (!r || e.target.closest('button, input, select, textarea, a')) { row = null; return; }
+      row = r; locked = false;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     }, { passive: true });
 
-    document.addEventListener('touchend', (e) => {
-      if (!currentTaskRow) return;
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const diffX = endX - startX;
-      const diffY = endY - startY;
-
-      if (Math.abs(diffX) > 65 && Math.abs(diffY) < 40) {
-        const taskId = currentTaskRow.getAttribute('data-task-id');
-        const dateStr = currentTaskRow.getAttribute('data-date');
-        if (diffX > 0) {
-          Tasks.toggleTaskDone(taskId, dateStr);
-        } else {
-          Tasks.deleteTask(taskId, dateStr);
-        }
+    document.addEventListener('touchmove', (e) => {
+      if (!row) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!locked) {
+        // vertical scroll wins unless the gesture is clearly horizontal
+        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { reset(); row = null; return; }
+        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) locked = true; else return;
       }
-
-      currentTaskRow = null;
+      row.classList.add('is-swiping');
+      row.style.transform = `translateX(${Math.max(-120, Math.min(120, dx))}px)`;
+      row.classList.toggle('swipe-right', dx > 0);
+      row.classList.toggle('swipe-left', dx < 0);
     }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (!row) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const r = row, wasLocked = locked;
+      const id = r.getAttribute('data-task-id'), date = r.getAttribute('data-date');
+      reset(); row = null; locked = false;
+      if (!wasLocked || Math.abs(dx) < 90) return;
+
+      if (dx > 0) {
+        Tasks.toggleTaskDone(id, date);
+      } else {
+        Tasks.deleteTask(id, date);
+        if (!String(id).startsWith('rec_')) showToast('Task deleted', 'UNDO', () => Tasks.undoLastAction());
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', () => { reset(); row = null; locked = false; }, { passive: true });
   }
 
   function triggerParticleBurst(x, y) {
@@ -1052,7 +1291,7 @@ window.NexusApp.UI = (function() {
       });
     }
 
-    // Quick-add field on Home
+    // Quick-add field on Home (understands "gym tomorrow 6pm high #fitness")
     const quickForm = document.getElementById('home-quick-add-form');
     if (quickForm) {
       quickForm.addEventListener('submit', (e) => {
@@ -1062,14 +1301,22 @@ window.NexusApp.UI = (function() {
         const prioritySelect = document.getElementById('home-quick-add-priority');
 
         if (input && input.value.trim()) {
-          Tasks.addTask({
-            title: input.value.trim(),
-            date: Dates.getTodayStr(),
-            time: timeInput ? timeInput.value : '',
-            priority: prioritySelect ? prioritySelect.value : 'medium'
-          });
+          const ex = window.NexusApp.Extras;
+          const p = ex ? ex.parseQuickAdd(input.value) : { title: input.value.trim() };
+          const today = Dates.getTodayStr();
+          const task = {
+            title: p.title,
+            date: p.date || today,
+            time: p.time || (timeInput ? timeInput.value : ''),
+            priority: p.priority || (prioritySelect ? prioritySelect.value : 'medium')
+          };
+          if (p.tag) task.tag = p.tag;
+          Tasks.addTask(task);
+          if (task.date !== today) showToast('Added to ' + Dates.formatDisplayDate(task.date, 'short'));
+
           input.value = '';
-          if (timeInput) timeInput.value = '';
+          input.dispatchEvent(new Event('input'));          // clears the preview chips
+          if (timeInput) { timeInput.value = ''; timeInput.dispatchEvent(new Event('input')); }
         }
       });
     }
@@ -1105,6 +1352,8 @@ window.NexusApp.UI = (function() {
       const animCheck = document.getElementById('set-anim-enabled');
       const timeSelect = document.getElementById('set-time-format');
       const weekSelect = document.getElementById('set-week-start');
+      const hcCheck = document.getElementById('set-high-contrast');
+      const hapCheck = document.getElementById('set-haptics');
 
       if (monikerInput) monikerInput.value = s.userName || 'Commander';
       if (accentSelect) accentSelect.value = s.accentColor || 'cyan';
@@ -1112,8 +1361,11 @@ window.NexusApp.UI = (function() {
       if (animCheck) animCheck.checked = Boolean(s.animationsEnabled);
       if (timeSelect) timeSelect.value = s.timeFormat || '24';
       if (weekSelect) weekSelect.value = s.weekStart || 'mon';
+      if (hcCheck) hcCheck.checked = Boolean(s.highContrast);
+      if (hapCheck) hapCheck.checked = s.hapticsEnabled !== false;
 
       document.documentElement.setAttribute('data-theme', s.accentColor || 'cyan');
+      document.documentElement.setAttribute('data-contrast', s.highContrast ? 'high' : 'normal');
     }
 
     form.addEventListener('submit', (e) => {
@@ -1124,9 +1376,12 @@ window.NexusApp.UI = (function() {
       const animationsEnabled = document.getElementById('set-anim-enabled').checked;
       const timeFormat = document.getElementById('set-time-format').value;
       const weekStart = document.getElementById('set-week-start').value;
+      const highContrast = document.getElementById('set-high-contrast').checked;
+      const hapticsEnabled = document.getElementById('set-haptics').checked;
 
-      State.updateSettings({ userName, accentColor, soundEnabled, animationsEnabled, timeFormat, weekStart });
+      State.updateSettings({ userName, accentColor, soundEnabled, animationsEnabled, timeFormat, weekStart, highContrast, hapticsEnabled });
       document.documentElement.setAttribute('data-theme', accentColor);
+      document.documentElement.setAttribute('data-contrast', highContrast ? 'high' : 'normal');
       window.NexusApp.Hub.closeSlidePanel('panel-settings');
       showToast('Settings saved, Commander.');
     });
@@ -1150,15 +1405,24 @@ window.NexusApp.UI = (function() {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
+          const Dialog = window.NexusApp.Dialog;
           try {
-            const mode = confirm('Import Mode:\n\nClick OK to MERGE with current directives.\nClick CANCEL to REPLACE completely.') ? 'merge' : 'replace';
+            const mode = await Dialog.choice('How should this backup be added to your current data?', {
+              title: 'IMPORT BACKUP',
+              options: [
+                { label: 'MERGE WITH CURRENT', value: 'merge', primary: true },
+                { label: 'REPLACE EVERYTHING', value: 'replace', danger: true },
+                { label: 'CANCEL', value: null }
+              ]
+            });
+            if (!mode) return;
             const merged = window.NexusApp.Storage.importJSON(event.target.result, mode, State.getData());
             State.replaceData(merged);
             showToast('Backup successfully imported');
             window.NexusApp.Hub.closeSlidePanel('panel-settings');
           } catch (err) {
-            alert('Failed to import backup: ' + err.message);
+            await Dialog.alert('Failed to import backup: ' + err.message, { title: 'IMPORT FAILED' });
           }
         };
         reader.readAsText(file);
@@ -1169,16 +1433,20 @@ window.NexusApp.UI = (function() {
     // Reset Data
     const resetBtn = document.getElementById('btn-reset-database');
     if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        const first = confirm('DANGER: This will erase all tasks, routines, and lists from localStorage.\n\nProceed to confirmation?');
-        if (first) {
-          const second = prompt('Type CONFIRM in uppercase to wipe database:');
-          if (second === 'CONFIRM') {
-            const fresh = window.NexusApp.Storage.resetAllData();
-            State.replaceData(fresh);
-            showToast('Database reset to clean state');
-            window.NexusApp.Hub.closeSlidePanel('panel-settings');
-          }
+      resetBtn.addEventListener('click', async () => {
+        const Dialog = window.NexusApp.Dialog;
+        const first = await Dialog.confirm('This erases all tasks, routines and lists from this browser.', {
+          title: 'DANGER ZONE', okLabel: 'CONTINUE', danger: true
+        });
+        if (!first) return;
+        const second = await Dialog.prompt('Type CONFIRM (capital letters) to wipe all data.', {
+          title: 'FINAL CONFIRMATION', placeholder: 'CONFIRM', okLabel: 'WIPE DATA'
+        });
+        if (second === 'CONFIRM') {
+          const fresh = window.NexusApp.Storage.resetAllData();
+          State.replaceData(fresh);
+          showToast('Database reset to clean state');
+          window.NexusApp.Hub.closeSlidePanel('panel-settings');
         }
       });
     }
@@ -1209,6 +1477,7 @@ window.NexusApp.UI = (function() {
     attachTaskRowListeners,
     openTaskEditModal,
     closeTaskEditModal,
+    promptCreateNewList,
     promptRecurringDeleteChoice,
     triggerParticleBurst,
     showToast,
