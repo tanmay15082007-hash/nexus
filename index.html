@@ -161,7 +161,10 @@
           <form id="home-quick-add-form" class="quick-add-form">
             <input type="text" id="home-quick-add-input" class="quick-add-main-input" placeholder="Add a task... try &quot;gym tomorrow 6pm high&quot;" required aria-label="Task title" autocomplete="off">
             <div class="quick-add-tools">
-              <input type="time" id="home-quick-add-time" class="quick-add-time-input" aria-label="Scheduled time">
+              <label class="time-field" id="home-time-field">
+                <span class="time-field-hint">Time</span>
+                <input type="time" id="home-quick-add-time" class="quick-add-time-input" aria-label="Scheduled time">
+              </label>
               <select id="home-quick-add-priority" class="quick-add-priority-select" aria-label="Priority">
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -177,16 +180,16 @@
 
         <!-- Search & Filter Strip (hidden until tasks exist) -->
         <div class="home-filters-strip" id="home-filters-strip" style="display:none;">
-          <input type="text" id="home-search-input" class="home-search-input" placeholder="Search tasks...">
+          <input type="text" id="home-search-input" class="home-search-input" placeholder="Search tasks..." aria-label="Search tasks">
           <div style="display: flex; gap: 6px;">
-            <select id="home-filter-priority" class="home-filter-select">
+            <select id="home-filter-priority" class="home-filter-select" aria-label="Filter by priority">
               <option value="all">All Priorities</option>
               <option value="critical">Critical</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
-            <select id="home-filter-status" class="home-filter-select">
+            <select id="home-filter-status" class="home-filter-select" aria-label="Filter by status">
               <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="done">Complete</option>
@@ -235,7 +238,7 @@
             <h2 class="display-font" style="font-size: 15px;">CUSTOM DIRECTIVE LISTS</h2>
             <span style="font-size: 11px; color: var(--text-dim);">Non-date bound idea backlogs, equipment logs, and projects</span>
           </div>
-          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-primary" onclick="window.NexusApp.UI.renderCustomListsScreen(); window.NexusApp.UI.promptCreateNewList ? window.NexusApp.UI.promptCreateNewList() : null">+ CREATE LIST</button>
+          <button type="button" class="nexus-btn nexus-btn-sm nexus-btn-primary" onclick="window.NexusApp.UI.promptCreateNewList()">+ CREATE LIST</button>
         </div>
 
         <div id="custom-lists-screen-container">
@@ -317,11 +320,11 @@
       </div>
 
       <div class="hub-search-bar">
-        <input type="text" id="hub-quick-filter-input" class="hub-filter-input" placeholder="Filter command nodes or press Ctrl+K for palette...">
+        <input type="text" id="hub-quick-filter-input" class="hub-filter-input" placeholder="Filter command nodes or press Ctrl+K for palette..." aria-label="Filter command hub">
       </div>
 
       <div id="command-hub-nodes-grid" class="hub-nodes-container">
-        <!-- 12 Orbital Animated Nodes dynamically populated by js/hub.js -->
+        <!-- Orbital nodes dynamically populated by js/hub.js -->
       </div>
     </div>
   </div>
@@ -333,7 +336,7 @@
     <div class="palette-dialog">
       <div class="palette-input-wrap">
         <span class="palette-input-icon">❯</span>
-        <input type="text" id="palette-search-input" class="palette-search-field" placeholder="Type a command or action..." autocomplete="off">
+        <input type="text" id="palette-search-input" class="palette-search-field" placeholder="Type a command or action..." autocomplete="off" aria-label="Command palette search">
         <kbd style="font-size: 10px; color: var(--text-dim); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">ESC</kbd>
       </div>
       <div id="palette-results-list" class="palette-results-list">
@@ -451,8 +454,10 @@
 
         <h4 class="form-label">Configure New Routine</h4>
         <form id="new-recurring-form">
+          <input type="hidden" id="rec-edit-id">
+
           <div class="form-field">
-            <input type="text" id="rec-title-input" class="form-input" placeholder="Routine title..." required>
+            <input type="text" id="rec-title-input" class="form-input" placeholder="Routine title..." required aria-label="Routine title">
           </div>
           <div class="form-grid-2">
             <div class="form-field">
@@ -469,6 +474,24 @@
               <input type="time" id="rec-time-input" class="form-input">
             </div>
           </div>
+
+          <div class="form-field" id="rec-weekly-wrap" style="display:none;">
+            <label class="form-label">Repeat on</label>
+            <div class="rec-day-picker" id="rec-day-picker">
+              <label class="rec-day"><input type="checkbox" value="1"><span>Mon</span></label>
+              <label class="rec-day"><input type="checkbox" value="2"><span>Tue</span></label>
+              <label class="rec-day"><input type="checkbox" value="3"><span>Wed</span></label>
+              <label class="rec-day"><input type="checkbox" value="4"><span>Thu</span></label>
+              <label class="rec-day"><input type="checkbox" value="5"><span>Fri</span></label>
+              <label class="rec-day"><input type="checkbox" value="6"><span>Sat</span></label>
+              <label class="rec-day"><input type="checkbox" value="0"><span>Sun</span></label>
+            </div>
+          </div>
+          <div class="form-field" id="rec-monthly-wrap" style="display:none;">
+            <label class="form-label" for="rec-month-day">Day of month</label>
+            <input type="number" id="rec-month-day" class="form-input" min="1" max="31" value="1">
+          </div>
+
           <div class="form-grid-2">
             <div class="form-field">
               <label class="form-label" for="rec-priority-select">Priority</label>
@@ -500,7 +523,10 @@
               <input type="date" id="rec-end-date" class="form-input">
             </div>
           </div>
-          <button type="submit" class="nexus-btn nexus-btn-primary" style="width: 100%;">+ ACTIVATE ROUTINE</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" id="rec-cancel-edit-btn" class="nexus-btn nexus-btn-secondary" style="display:none;">CANCEL EDIT</button>
+            <button type="submit" id="rec-submit-btn" class="nexus-btn nexus-btn-primary" style="flex:1;">+ ACTIVATE ROUTINE</button>
+          </div>
         </form>
       </div>
       <div class="panel-footer">
@@ -550,7 +576,7 @@
   </div>
 
   <!-- ========================================================================
-       SLIDE-IN PANEL 5: SETTINGS CONSOLE (7 Tabs)
+       SLIDE-IN PANEL 5: SETTINGS CONSOLE
        ======================================================================== -->
   <div id="panel-settings" class="nexus-slide-panel" role="dialog" aria-modal="true">
     <div class="panel-container">
@@ -570,7 +596,7 @@
 
       <form id="settings-deck-form" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
         <div class="panel-body">
-          
+
           <!-- Tab 1: Profile -->
           <div id="tab-profile" class="settings-tab-pane">
             <div class="form-field">
@@ -591,6 +617,11 @@
                 <option value="green">Green</option>
                 <option value="red">Red</option>
               </select>
+            </div>
+            <div class="form-field">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" id="set-high-contrast"><span>High-contrast mode</span>
+              </label>
             </div>
           </div>
 
@@ -627,6 +658,11 @@
                 <span>Enable Rotating Rings & Particle Bursts</span>
               </label>
             </div>
+            <div class="form-field" style="margin-top:14px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" id="set-haptics" checked><span>Vibrate when completing a task (phones)</span>
+              </label>
+            </div>
           </div>
 
           <!-- Tab 5: Alerts -->
@@ -637,7 +673,7 @@
                 AUTHORIZE BROWSER NOTIFICATIONS
               </button>
               <span style="font-size: 11px; color: var(--text-dim); margin-top: 6px; display: block;">
-                Note: Background notifications on static sites are limited by browser push capabilities. In-app audio and visual banners remain fully active.
+                Timed tasks alert you while the app is open. Background notifications on static sites are limited by browser push capabilities.
               </span>
             </div>
           </div>
@@ -652,7 +688,7 @@
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button type="button" id="btn-export-backup" class="nexus-btn nexus-btn-secondary" style="flex: 1;">EXPORT JSON BACKUP</button>
                 <button type="button" id="btn-import-backup" class="nexus-btn nexus-btn-secondary" style="flex: 1;">IMPORT FROM JSON</button>
-                <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;">
+                <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;" aria-label="Import backup file">
               </div>
             </div>
 
@@ -675,7 +711,24 @@
   </div>
 
   <!-- ========================================================================
-       SLIDE-IN PANEL 6: KEYBOARD SHORTCUTS HELP (?)
+       SLIDE-IN PANEL 6: WEEKLY REVIEW
+       ======================================================================== -->
+  <div id="panel-review" class="nexus-slide-panel" role="dialog" aria-modal="true" aria-labelledby="review-title">
+    <div class="panel-container">
+      <div class="panel-header">
+        <h3 class="panel-title" id="review-title">WEEKLY REVIEW</h3>
+        <button type="button" class="panel-close-btn row-tool-btn" aria-label="Close">×</button>
+      </div>
+      <div class="panel-body" id="review-body"></div>
+      <div class="panel-footer">
+        <button type="button" class="nexus-btn nexus-btn-secondary panel-close-btn">CLOSE</button>
+        <button type="button" id="review-plan-btn" class="nexus-btn nexus-btn-primary">PLAN NEXT WEEK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       SLIDE-IN PANEL 7: KEYBOARD SHORTCUTS HELP (?)
        ======================================================================== -->
   <div id="panel-shortcuts" class="nexus-slide-panel" role="dialog" aria-modal="true">
     <div class="panel-container">
@@ -711,6 +764,9 @@
 
           <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">Esc</kbd>
           <span>Close open hub, palette, or slide panel</span>
+
+          <kbd style="background: rgba(34,211,238,0.15); border: 1px solid var(--primary); padding: 3px 6px; border-radius: 4px; text-align: center; color: var(--primary); font-family: var(--font-mono);">Space</kbd>
+          <span>On a focused task: complete it (Enter edits, Delete removes)</span>
         </div>
       </div>
       <div class="panel-footer">
@@ -781,7 +837,7 @@
             <div style="border: 1px solid var(--primary-border); border-radius: var(--radius-sm); padding: 8px; background: rgba(3,7,18,0.5);">
               <div id="modal-subtasks-checklist"></div>
               <div style="display: flex; gap: 6px; margin-top: 8px;">
-                <input type="text" id="modal-subtask-input" placeholder="+ Add checkpoint..." style="font-size: 11px; flex: 1;">
+                <input type="text" id="modal-subtask-input" placeholder="+ Add checkpoint..." style="font-size: 11px; flex: 1;" aria-label="New subtask">
                 <button type="button" id="modal-subtask-add-btn" class="nexus-btn nexus-btn-xs nexus-btn-secondary">ADD</button>
               </div>
             </div>
@@ -803,7 +859,6 @@
     <span id="toast-text" class="toast-text">Directive Updated</span>
     <button type="button" id="toast-undo-btn" class="toast-undo-btn">UNDO</button>
   </div>
-
 
   <!-- ========================================================================
        MOBILE BOTTOM NAV BAR (mobile only, hidden on desktop)
@@ -866,9 +921,11 @@
   <script src="js/charts.js"></script>
   <script src="js/hub.js"></script>
   <script src="js/palette.js"></script>
+  <script src="js/dialog.js"></script>
   <script src="js/timer.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/extras.js"></script>
   <script src="js/app.js"></script>
 
 </body>
