@@ -1,6 +1,6 @@
 /**
  * NEXUS - The Command Hub & Core Orb Controller
- * Grouped into PLAN, TRACK and SYSTEM sections.
+ * Sections: PLAN, TRACK, SYSTEM, plus a RECENT row (last 3 features used).
  * A full-width "Download NEXUS" card shows at the top on Android only,
  * and disappears once the app is installed.
  */
@@ -120,6 +120,17 @@ window.NexusApp.Hub = (function() {
       }
     },
     {
+      id: 'review',
+      section: 'track',
+      title: 'Weekly Review',
+      hint: 'Completed, missed & best day of the week',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
+      action: () => {
+        closeHub();
+        openSlidePanel('panel-review');
+      }
+    },
+    {
       id: 'timer',
       section: 'track',
       title: 'Focus Timer',
@@ -188,6 +199,36 @@ window.NexusApp.Hub = (function() {
     }
   ];
 
+  /* ---------------- Recent row ---------------- */
+  const RECENT_KEY = 'nexus_recent_nodes';
+
+  function getRecent() {
+    try {
+      const r = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+      return Array.isArray(r) ? r : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function pushRecent(id) {
+    try {
+      const r = getRecent().filter(x => x !== id);
+      r.unshift(id);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(r.slice(0, 3)));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function nodeHtml(node, sectionId) {
+    return `
+      <button type="button" class="hub-orbital-node" data-node-id="${node.id}" data-section="${sectionId}"
+              tabindex="0" aria-label="${node.title}: ${node.hint}">
+        <div class="node-icon-ring">${node.icon}</div>
+        <span class="node-title">${node.title}</span>
+        <span class="node-hint">${node.hint}</span>
+      </button>`;
+  }
+
   function init() {
     renderHubNodes();
     bindEvents();
@@ -200,6 +241,10 @@ window.NexusApp.Hub = (function() {
   function renderHubNodes() {
     const gridEl = document.getElementById('command-hub-nodes-grid');
     if (!gridEl) return;
+
+    const headerHtml = (id, title) => `<div class="hub-section-title" data-section-header="${id}"
+        style="grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; color: var(--text-dim); padding: 8px 2px 0;">${title}</div>`;
+    const isVisible = (n) => typeof n.visible !== 'function' || n.visible();
 
     let html = '';
 
@@ -217,28 +262,20 @@ window.NexusApp.Hub = (function() {
         </button>`;
     }
 
+    // Recent: last 3 features used
+    const recent = getRecent()
+      .map(id => HUB_NODES.find(n => n.id === id))
+      .filter(n => n && isVisible(n));
+    if (recent.length) {
+      html += headerHtml('recent', 'RECENT');
+      html += recent.map(n => nodeHtml(n, 'recent')).join('');
+    }
+
     SECTIONS.forEach(section => {
-      const nodes = HUB_NODES.filter(n =>
-        n.section === section.id && (typeof n.visible !== 'function' || n.visible())
-      );
+      const nodes = HUB_NODES.filter(n => n.section === section.id && isVisible(n));
       if (!nodes.length) return;
-
-      // Section header spans the whole grid row
-      html += `<div class="hub-section-title" data-section-header="${section.id}"
-                    style="grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; color: var(--text-dim); padding: 8px 2px 0;">
-                 ${section.title}
-               </div>`;
-
-      html += nodes.map(node => `
-        <button type="button" class="hub-orbital-node" data-node-id="${node.id}" data-section="${section.id}"
-                tabindex="0" aria-label="${node.title}: ${node.hint}">
-          <div class="node-icon-ring">
-            ${node.icon}
-          </div>
-          <span class="node-title">${node.title}</span>
-          <span class="node-hint">${node.hint}</span>
-        </button>
-      `).join('');
+      html += headerHtml(section.id, section.title);
+      html += nodes.map(n => nodeHtml(n, section.id)).join('');
     });
 
     gridEl.innerHTML = html;
@@ -249,6 +286,7 @@ window.NexusApp.Hub = (function() {
         const node = HUB_NODES.find(n => n.id === id);
         if (node && typeof node.action === 'function') {
           if (Audio) Audio.click();
+          pushRecent(id);
           node.action();
         }
       });
@@ -270,7 +308,7 @@ window.NexusApp.Hub = (function() {
     const hubOverlay = document.getElementById('command-hub-overlay');
     if (!hubOverlay) return;
 
-    // Refresh tiles so the Download card reflects the current state
+    // Refresh tiles so Recent and the Download card reflect the current state
     renderHubNodes();
 
     hubOverlay.classList.add('active');
@@ -319,6 +357,8 @@ window.NexusApp.Hub = (function() {
       window.NexusApp.UI.renderRecurringPanel();
     } else if (panelId === 'panel-timer' && window.NexusApp.Timer) {
       window.NexusApp.Timer.renderTimer();
+    } else if (panelId === 'panel-review' && window.NexusApp.Extras) {
+      window.NexusApp.Extras.renderReview();
     }
   }
 
