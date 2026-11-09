@@ -119,7 +119,7 @@ window.NexusApp.UI = (function() {
     if (totalEl) totalEl.textContent = stats.total;
     if (doneEl) doneEl.textContent = stats.done;
     if (pendingEl) pendingEl.textContent = stats.pending;
-    if (overdueEl) overdueEl.textContent = stats.overdue;
+    if (overdueEl) overdueEl.textContent = Tasks.getOverdueTasks().length;
 
     // 3. Today's Date Banner
     const dateBanner = document.getElementById('home-today-date-text');
@@ -622,13 +622,13 @@ window.NexusApp.UI = (function() {
       });
     });
 
-    // Pin to Focus 3
+    // Pin to Focus 3 (State.commit refreshes every view, including the calendar panel)
     container.querySelectorAll('.row-tool-btn.pin-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const ex = window.NexusApp.Extras;
         if (ex && ex.togglePin(btn.getAttribute('data-task-id'), btn.getAttribute('data-date'))) {
-          renderActiveScreen();
+          State.commit('pinToggle');
         }
       });
     });
@@ -869,6 +869,7 @@ window.NexusApp.UI = (function() {
             Rec.deleteTemplate(btn.getAttribute('data-id'));
             if (editId.value === btn.getAttribute('data-id')) resetForm();
             renderRecurringPanel();
+            showToast('Routine deleted', 'UNDO', () => { Tasks.undoLastAction(); renderRecurringPanel(); });
           }
         });
       });
@@ -985,7 +986,8 @@ window.NexusApp.UI = (function() {
     if (taskId) {
       task = (stateData.tasks || []).find(t => t.id === taskId);
       if (!task && taskId.startsWith('rec_')) {
-        const activeDate = State.getSelectedDate();
+        // the instance id ends with its own date: rec_<id>_YYYY-MM-DD
+        const activeDate = taskId.slice(-10);
         task = window.NexusApp.Recurring.getInstancesForDate(activeDate).find(i => i.id === taskId);
       }
     }
@@ -1004,7 +1006,12 @@ window.NexusApp.UI = (function() {
     dateInput.value = task ? task.date : (defaultDate || State.getSelectedDate() || Dates.getTodayStr());
     timeInput.value = task ? (task.time || '') : '';
     prioritySelect.value = task ? (task.priority || 'medium') : 'medium';
-    tagSelect.value = task ? (task.tag || 'work') : 'work';
+
+    // Custom tags (for example from "#gym" in quick add) are added to the dropdown on the fly
+    const tagVal = task ? (task.tag || 'work') : 'work';
+    if (![...tagSelect.options].some(o => o.value === tagVal)) tagSelect.add(new Option(tagVal, tagVal));
+    tagSelect.value = tagVal;
+
     notesInput.value = task ? (task.notes || '') : '';
 
     if (modalHeaderTitle) {
@@ -1073,7 +1080,7 @@ window.NexusApp.UI = (function() {
     if (!title) return;
 
     if (taskId && taskId.startsWith('rec_')) {
-      const activeDate = State.getSelectedDate();
+      const activeDate = taskId.slice(-10);   // the instance's own date
       const inst = window.NexusApp.Recurring.getInstancesForDate(activeDate).find(i => i.id === taskId);
       if (inst && inst.recurringId) {
         const choice = await window.NexusApp.Dialog.choice('This is a recurring task. Apply your changes to:', {
@@ -1171,7 +1178,7 @@ window.NexusApp.UI = (function() {
     });
   }
 
-  // Swipe that does not fight vertical scrolling: right = complete, left = delete (with Undo)
+  // Swipe that does not fight vertical scrolling: right = complete, left = delete (Tasks shows the Undo toast)
   function setupTouchGestures() {
     let row = null, startX = 0, startY = 0, locked = false;
 
@@ -1215,8 +1222,7 @@ window.NexusApp.UI = (function() {
       if (dx > 0) {
         Tasks.toggleTaskDone(id, date);
       } else {
-        Tasks.deleteTask(id, date);
-        if (!String(id).startsWith('rec_')) showToast('Task deleted', 'UNDO', () => Tasks.undoLastAction());
+        Tasks.deleteTask(id, date);   // shows its own Undo toast
       }
     }, { passive: true });
 
