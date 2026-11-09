@@ -1,7 +1,7 @@
 /**
  * NEXUS - Holographic SVG Visualisation & Telemetry Engine
  * Pure inline SVG. Zero external dependencies.
- * Features: Centerpiece Donut Chart, 7-Day Velocity Bars, 30-Day Heatmap, real Best Streak
+ * Features: Centerpiece Donut Chart, 7-Day Velocity Bars, 30-Day Matrix, real Best Streak
  */
 
 window.NexusApp = window.NexusApp || {};
@@ -149,57 +149,87 @@ window.NexusApp.Charts = (function() {
     container.innerHTML = svgHtml;
   }
 
+  // 30-day matrix: a calendar-style grid (one square per day) with weekday headings,
+  // a colour key, and tap-for-details.
   function renderHeatmap(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const today = Dates.getTodayStr();
+    const weekStart = (window.NexusApp.State.getSettings().weekStart) || 'mon';
+    const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
     const cells = [];
     for (let i = 29; i >= 0; i--) {
       const dStr = Dates.addDays(today, -i);
-      const stats = window.NexusApp.Tasks.getDailyStats(dStr);
-      cells.push({
-        dateStr: dStr,
-        dayNum: dStr.substring(8, 10),
-        stats: stats
-      });
+      cells.push({ dateStr: dStr, stats: window.NexusApp.Tasks.getDailyStats(dStr) });
     }
 
+    // Pad the first row so every date sits under its weekday heading
+    const firstDow = Dates.strToDate(cells[0].dateStr).getDay();
+    const lead = weekStart === 'mon' ? (firstDow + 6) % 7 : firstDow;
+
+    const headers = weekStart === 'mon'
+      ? ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+      : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    let fullDays = 0;
+    let activeDays = 0;
+
     let cellsHtml = '';
-    cells.forEach(c => {
-      let level = '0';
+    for (let b = 0; b < lead; b++) cellsHtml += '<div class="heatmap-cell heatmap-blank"></div>';
+
+    cells.forEach((c, idx) => {
+      let level = 0;
       if (c.stats.total > 0) {
-        if (c.stats.percent === 100) level = '4';
-        else if (c.stats.percent >= 66) level = '3';
-        else if (c.stats.percent >= 33) level = '2';
-        else level = '1';
+        activeDays++;
+        if (c.stats.percent === 100) { level = 4; fullDays++; }
+        else if (c.stats.percent >= 66) level = 3;
+        else if (c.stats.percent >= 33) level = 2;
+        else level = 1;
       }
+      const dayNum = parseInt(c.dateStr.substring(8, 10), 10);
+      const isFirst = dayNum === 1 || idx === 0;
+      const monthLabel = MONTHS[parseInt(c.dateStr.substring(5, 7), 10) - 1];
 
       cellsHtml += `
-        <div class="heatmap-cell level-${level}"
-             data-tooltip="${c.dateStr}: ${c.stats.percent}% (${c.stats.done}/${c.stats.total} completed)"
-             title="${c.dateStr}: ${c.stats.percent}% (${c.stats.done}/${c.stats.total})">
-          <span class="heatmap-day-num">${c.dayNum}</span>
-        </div>
-      `;
+        <button type="button" class="heatmap-cell level-${level} ${c.dateStr === today ? 'is-today' : ''} ${isFirst ? 'is-first' : ''}"
+                data-date="${c.dateStr}" data-month="${monthLabel}"
+                aria-label="${c.dateStr}: ${c.stats.done} of ${c.stats.total} done">
+          ${dayNum}
+        </button>`;
     });
 
-    const html = `
+    container.innerHTML = `
       <div class="heatmap-container">
+        <p class="heatmap-caption">Each square is one day (last 30 days). The colour shows how many of that day's tasks you finished.</p>
+        <div class="heatmap-weekdays">${headers.map(h => `<span class="heatmap-weekday">${h}</span>`).join('')}</div>
         <div class="heatmap-grid">${cellsHtml}</div>
+        <div class="heatmap-detail" id="heatmap-detail">Tap a square to see that day.</div>
+        <div class="heatmap-summary">${fullDays} fully completed day${fullDays === 1 ? '' : 's'} · ${activeDays} day${activeDays === 1 ? '' : 's'} with tasks</div>
         <div class="heatmap-legend">
-          <span class="legend-text">LESS</span>
-          <span class="legend-swatch level-0"></span>
-          <span class="legend-swatch level-1"></span>
-          <span class="legend-swatch level-2"></span>
-          <span class="legend-swatch level-3"></span>
-          <span class="legend-swatch level-4"></span>
-          <span class="legend-text">100%</span>
+          <span class="legend-item"><i class="legend-swatch level-0"></i>No tasks</span>
+          <span class="legend-item"><i class="legend-swatch level-1"></i>Under 33%</span>
+          <span class="legend-item"><i class="legend-swatch level-2"></i>33–65%</span>
+          <span class="legend-item"><i class="legend-swatch level-3"></i>66–99%</span>
+          <span class="legend-item"><i class="legend-swatch level-4"></i>100% done</span>
         </div>
       </div>
     `;
 
-    container.innerHTML = html;
+    const detail = container.querySelector('#heatmap-detail');
+    container.querySelectorAll('button.heatmap-cell').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.heatmap-cell.is-selected').forEach(x => x.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        const d = btn.getAttribute('data-date');
+        const s = window.NexusApp.Tasks.getDailyStats(d);
+        const label = `${Dates.getDayName(d, false)} ${Dates.formatDisplayDate(d, 'short')}`;
+        detail.textContent = s.total === 0
+          ? `${label}: no tasks`
+          : `${label}: ${s.done} of ${s.total} done (${s.percent}%)`;
+      });
+    });
   }
 
   function calculateMetrics() {
