@@ -79,6 +79,14 @@ window.NexusApp.Palette = (function() {
       run: () => State.setCurrentScreen('stats')
     },
     {
+      id: 'cmd-review',
+      title: 'Open Weekly Review',
+      keywords: 'weekly review summary completed missed best day plan',
+      category: 'Navigation',
+      icon: '✔',
+      run: () => Hub.openSlidePanel('panel-review')
+    },
+    {
       id: 'cmd-timer',
       title: 'Engage Focus Pomodoro Timer',
       keywords: 'focus timer pomodoro countdown 25 5 break clock',
@@ -301,11 +309,11 @@ window.NexusApp.Palette = (function() {
       input.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          selectedIndex = (selectedIndex + 1) % filteredCommands.length;
+          if (filteredCommands.length) selectedIndex = (selectedIndex + 1) % filteredCommands.length;
           renderList();
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
-          selectedIndex = (selectedIndex - 1 + filteredCommands.length) % filteredCommands.length;
+          if (filteredCommands.length) selectedIndex = (selectedIndex - 1 + filteredCommands.length) % filteredCommands.length;
           renderList();
         } else if (e.key === 'Enter') {
           e.preventDefault();
