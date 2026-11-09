@@ -1,7 +1,7 @@
 /**
  * NEXUS - Holographic SVG Visualisation & Telemetry Engine
- * Pure inline SVG and Canvas charts. Zero external dependencies.
- * Features: Centerpiece Holographic Donut Chart, 7-Day Velocity Bars, 30-Day Heatmap
+ * Pure inline SVG. Zero external dependencies.
+ * Features: Centerpiece Donut Chart, 7-Day Velocity Bars, 30-Day Heatmap, real Best Streak
  */
 
 window.NexusApp = window.NexusApp || {};
@@ -68,7 +68,7 @@ window.NexusApp.Charts = (function() {
           <circle cx="110" cy="110" r="${radius}" class="holo-ticks" />
 
           <!-- Active progress gauge -->
-          <circle cx="110" cy="110" r="${radius}" class="holo-progress" 
+          <circle cx="110" cy="110" r="${radius}" class="holo-progress"
                   style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset}; stroke: ${progressColor}; filter: drop-shadow(0 0 10px ${glowColor});" />
 
           <!-- Inner decorative nodes -->
@@ -176,7 +176,7 @@ window.NexusApp.Charts = (function() {
       }
 
       cellsHtml += `
-        <div class="heatmap-cell level-${level}" 
+        <div class="heatmap-cell level-${level}"
              data-tooltip="${c.dateStr}: ${c.stats.percent}% (${c.stats.done}/${c.stats.total} completed)"
              title="${c.dateStr}: ${c.stats.percent}% (${c.stats.done}/${c.stats.total})">
           <span class="heatmap-day-num">${c.dayNum}</span>
@@ -207,15 +207,13 @@ window.NexusApp.Charts = (function() {
     const stateData = window.NexusApp.State.getData();
     const tasks = stateData.tasks || [];
 
+    // Current streak: consecutive fully completed days, today counts once finished
     let currentStreak = 0;
-    let checkDate = today;
+    let checkDate = Dates.addDays(today, -1);
 
     const todayStats = window.NexusApp.Tasks.getDailyStats(today);
     if (todayStats.total > 0 && todayStats.percent === 100) {
       currentStreak++;
-      checkDate = Dates.addDays(today, -1);
-    } else {
-      checkDate = Dates.addDays(today, -1);
     }
 
     for (let i = 0; i < 365; i++) {
@@ -229,6 +227,23 @@ window.NexusApp.Charts = (function() {
         break;
       }
     }
+
+    // Best streak: scan every day from the earliest known date up to today
+    let earliest = today;
+    tasks.forEach(t => { if (t.date && t.date < earliest) earliest = t.date; });
+    (stateData.recurring || []).forEach(r => { if (r.startDate && r.startDate < earliest) earliest = r.startDate; });
+    const span = Math.min(Dates.daysBetween(earliest, today), 730);
+
+    let run = 0;
+    let bestStreak = 0;
+    for (let i = span; i >= 0; i--) {
+      const d = Dates.addDays(today, -i);
+      const st = window.NexusApp.Tasks.getDailyStats(d);
+      if (st.total === 0) continue;                       // empty days neither add nor break
+      if (st.percent === 100) { run++; bestStreak = Math.max(bestStreak, run); }
+      else if (d !== today) run = 0;                      // today is still in progress
+    }
+    bestStreak = Math.max(bestStreak, currentStreak);
 
     const allTotal = tasks.length;
     const allDone = tasks.filter(t => t.done).length;
@@ -258,7 +273,7 @@ window.NexusApp.Charts = (function() {
 
     return {
       currentStreak,
-      bestStreak: currentStreak,
+      bestStreak,
       overallRate,
       mostProductiveDay: Dates.DAY_NAMES_FULL[bestDow],
       allTotal,
