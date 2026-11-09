@@ -197,7 +197,7 @@ window.NexusApp.Extras = (function () {
     } catch (e) {}
   }
 
-  /* ---------------- Weekly review ---------------- */
+  /* ---------------- Weekly review (clear layout) ---------------- */
   function renderReview() {
     const body = $('review-body');
     if (!body) return;
@@ -210,27 +210,65 @@ window.NexusApp.Extras = (function () {
       const d = Dates.addDays(today, -i);
       const s = App.Tasks.getDailyStats(d);
       rows.push({ d, s });
-      done += s.done; total += s.total;
+      done += s.done;
+      total += s.total;
       if (d !== today) missed += s.total - s.done;
-      if (s.total > 0 && (!best || s.percent > best.s.percent)) best = { d, s };
+      if (s.total > 0 && (!best || s.percent > best.s.percent ||
+          (s.percent === best.s.percent && s.done > best.s.done))) best = { d, s };
     }
     const rate = total ? Math.round((done / total) * 100) : 0;
     const bestName = best ? Dates.DAY_NAMES_FULL[Dates.strToDate(best.d).getDay()] : '-';
+    const bestHint = best ? `${best.s.done} of ${best.s.total} done (${best.s.percent}%)` : 'No tasks yet';
+    const rangeText = `${Dates.formatDisplayDate(rows[0].d, 'short')} – ${Dates.formatDisplayDate(today, 'short')}`;
+
+    const dayRows = rows.map(r => {
+      const isToday = r.d === today;
+      const empty = r.s.total === 0;
+      const tone = r.s.percent === 100 ? 'is-full' : (r.s.percent >= 50 ? 'is-mid' : 'is-low');
+      return `
+        <div class="review-row ${isToday ? 'is-today' : ''} ${empty ? 'is-empty' : ''}">
+          <div class="review-day">
+            <strong>${Dates.getDayName(r.d, false)}${isToday ? ' (today)' : ''}</strong>
+            <small>${Dates.formatDisplayDate(r.d, 'short')}</small>
+          </div>
+          <div class="review-track" role="img" aria-label="${r.s.percent}% done">
+            <div class="review-fill ${tone}" style="width:${empty ? 0 : r.s.percent}%"></div>
+          </div>
+          <div class="review-count">
+            ${empty ? '<small>No tasks</small>' : `<strong>${r.s.done} of ${r.s.total}</strong><small>${r.s.percent}% done</small>`}
+          </div>
+        </div>`;
+    }).join('');
 
     body.innerHTML = `
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Your last 7 days, ending today.</p>
+      <p class="review-intro">Your last 7 days (${rangeText}). Here is how many tasks you finished and how many slipped.</p>
+
       <div class="review-grid">
-        <div class="stat-chip stat-done"><div class="stat-chip-num">${done}</div><div class="stat-chip-label">Completed</div></div>
-        <div class="stat-chip stat-overdue"><div class="stat-chip-num">${missed}</div><div class="stat-chip-label">Missed</div></div>
-        <div class="stat-chip"><div class="stat-chip-num">${rate}%</div><div class="stat-chip-label">Completion rate</div></div>
-        <div class="stat-chip stat-pending"><div class="stat-chip-num" style="font-size:16px;">${bestName}</div><div class="stat-chip-label">Best day</div></div>
+        <div class="stat-chip stat-done">
+          <div class="stat-chip-num">${done}</div>
+          <div class="stat-chip-label">Completed</div>
+          <div class="stat-chip-hint">out of ${total} tasks</div>
+        </div>
+        <div class="stat-chip stat-overdue">
+          <div class="stat-chip-num">${missed}</div>
+          <div class="stat-chip-label">Missed</div>
+          <div class="stat-chip-hint">unfinished, earlier days</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-num">${rate}%</div>
+          <div class="stat-chip-label">Completion rate</div>
+          <div class="stat-chip-hint">completed ÷ all tasks</div>
+        </div>
+        <div class="stat-chip stat-pending">
+          <div class="stat-chip-num" style="font-size:18px;">${bestName}</div>
+          <div class="stat-chip-label">Best day</div>
+          <div class="stat-chip-hint">${bestHint}</div>
+        </div>
       </div>
-      ${rows.map(r => `
-        <div class="review-row">
-          <span>${Dates.getDayName(r.d, false)}</span>
-          <div class="review-track"><div class="review-fill" style="width:${r.s.percent}%"></div></div>
-          <span>${r.s.done}/${r.s.total}</span>
-        </div>`).join('')}`;
+
+      <div class="review-section-title">DAY BY DAY</div>
+      <div class="review-section-sub">Bar colour: green = all done, amber = half or more, red = less than half.</div>
+      ${dayRows}`;
   }
 
   function bindReview() {
