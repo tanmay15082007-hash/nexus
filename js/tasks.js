@@ -47,8 +47,8 @@ window.NexusApp.Tasks = (function() {
       const filters = window.NexusApp.State.getFilters();
       if (filters.search) {
         const q = filters.search.toLowerCase().trim();
-        combined = combined.filter(t => 
-          t.title.toLowerCase().includes(q) || 
+        combined = combined.filter(t =>
+          t.title.toLowerCase().includes(q) ||
           (t.notes && t.notes.toLowerCase().includes(q))
         );
       }
@@ -202,19 +202,31 @@ window.NexusApp.Tasks = (function() {
         }
         break;
 
-      case 'recurringSkipUndo':
+      case 'recurringSkipUndo': {
         const tpl = (stateData.recurring || []).find(r => r.id === action.recurringId);
         if (tpl && tpl.exceptions) {
           delete tpl.exceptions[action.dateStr];
           window.NexusApp.State.commit('recurringRestore');
         }
         break;
+      }
 
-      case 'recurringEndDateUndo':
+      case 'recurringEndDateUndo': {
         const rTpl = (stateData.recurring || []).find(r => r.id === action.recurringId);
         if (rTpl) {
           rTpl.endDate = action.oldEndDate;
           window.NexusApp.State.commit('recurringRestore');
+        }
+        break;
+      }
+
+      case 'recurringDelete':
+        if (action.template) {
+          stateData.recurring.push(action.template);
+          window.NexusApp.State.commit('recurringRestore');
+          if (window.NexusApp.UI && window.NexusApp.UI.showToast) {
+            window.NexusApp.UI.showToast('Routine restored');
+          }
         }
         break;
 
