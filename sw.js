@@ -3,7 +3,7 @@
  * Offline enabled. Relative paths only, for GitHub Pages sub-path hosting.
  */
 
-const CACHE_NAME = 'nexus-v2.2.0';
+const CACHE_NAME = 'nexus-v2.3.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -14,6 +14,7 @@ const PRECACHE_ASSETS = [
   './css/effects.css',
   './css/layout.css',
   './css/components.css',
+  './css/nexus-ui.css',
   './js/config.js',
   './js/audio.js',
   './js/dates.js',
@@ -30,6 +31,7 @@ const PRECACHE_ASSETS = [
   './js/timer.js',
   './js/pwa.js',
   './js/ui.js',
+  './js/recurring-ui.js',
   './js/extras.js',
   './js/app.js',
   './assets/icons/icon.svg',
