@@ -75,7 +75,7 @@ window.NexusApp.Calendar = (function() {
       // Do not intercept if user is typing in form elements
       const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
       if (targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select') return;
-      if (document.querySelector('.nexus-dialog-modal.active')) return;
+      if (document.querySelector('.nexus-dialog-modal.active, .nx-dialog-backdrop')) return;
 
       const activeDate = window.NexusApp.State.getSelectedDate() || Dates.getTodayStr();
 
@@ -242,8 +242,8 @@ window.NexusApp.Calendar = (function() {
       ].filter(Boolean).join(' ');
 
       html += `
-        <button type="button" 
-                class="${cellClasses}" 
+        <button type="button"
+                class="${cellClasses}"
                 data-date="${cell.dateStr}"
                 aria-label="${cell.dateStr}, ${doneCount} of ${total} completed">
           <span class="cal-date-num">${cell.dayNumber}</span>
