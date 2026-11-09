@@ -29,6 +29,10 @@ window.NexusApp.App = (function() {
       window.NexusApp.PWA.init();
     }
 
+    if (window.NexusApp.Extras) {
+      window.NexusApp.Extras.init();
+    }
+
     setupTopBarButtons();
     setupKeyboardShortcuts();
   }
@@ -186,7 +190,7 @@ window.NexusApp.App = (function() {
           Hub.openSlidePanel('panel-recurring');
           break;
 
-        case '/':
+        case '/': {
           e.preventDefault();
           const searchInput = document.getElementById('home-search-input');
           if (searchInput) {
@@ -194,6 +198,7 @@ window.NexusApp.App = (function() {
             searchInput.select();
           }
           break;
+        }
 
         case '?':
           e.preventDefault();
