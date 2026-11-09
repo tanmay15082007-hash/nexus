@@ -1,8 +1,8 @@
 /**
  * NEXUS - In-app dialogs (replaces alert / confirm / prompt)
- * Dialog.alert(msg, opts) -> Promise<true>
+ * Dialog.alert(msg, opts)   -> Promise<true>
  * Dialog.confirm(msg, opts) -> Promise<boolean>
- * Dialog.prompt(msg, opts) -> Promise<string|null>   (opts.type: 'text' | 'date')
+ * Dialog.prompt(msg, opts)  -> Promise<string|null>   (opts.type: 'text' | 'date')
  * Dialog.choice(msg, {options:[{label,value,primary,danger}]}) -> Promise<value|null>
  */
 window.NexusApp = window.NexusApp || {};
@@ -65,7 +65,7 @@ window.NexusApp.Dialog = (function () {
         if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
           e.preventDefault(); e.stopPropagation();
           const i = o.buttons.findIndex(b => b.primary);
-          pick(i >= 0 ? i : o.buttons.length - 1);
+          if (i >= 0) pick(i);          // never auto-confirm a dangerous action with Enter
           return;
         }
         if (e.key === 'Tab') {
