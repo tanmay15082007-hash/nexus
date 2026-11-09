@@ -3,7 +3,8 @@
  * Offline enabled. Relative paths only, for GitHub Pages sub-path hosting.
  */
 
-const CACHE_NAME = 'nexus-v2.1.2';
+const CACHE_NAME = 'nexus-v2.2.0';
+
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -25,9 +26,11 @@ const PRECACHE_ASSETS = [
   './js/charts.js',
   './js/hub.js',
   './js/palette.js',
+  './js/dialog.js',
   './js/timer.js',
   './js/pwa.js',
   './js/ui.js',
+  './js/extras.js',
   './js/app.js',
   './assets/icons/icon.svg',
   './assets/icons/favicon-32.png',
