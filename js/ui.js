@@ -1034,9 +1034,67 @@ window.NexusApp.UI = (function() {
     if (!listEl) return;
 
     if (!taskId) {
+      listEl.dataset.task = '';
       listEl.innerHTML = '<div class="subtask-placeholder">Save directive first to add checkpoints.</div>';
       return;
     }
+
+    const task = (State.getData().tasks || []).find(t => t.id === taskId);
+    if (!task || !task.subtasks || task.subtasks.length === 0) {
+      listEl.dataset.task = taskId;
+      listEl.dataset.count = '0';
+      listEl.innerHTML = '<div class="subtask-placeholder">No checkpoints added.</div>';
+      return;
+    }
+
+    // Remember scroll position so ticking a box does not jump the list
+    const oldScroller = listEl.querySelector('.subtask-scroll');
+    const sameTask = listEl.dataset.task === taskId;
+    const prevTop = oldScroller && sameTask ? oldScroller.scrollTop : 0;
+    const prevCount = sameTask ? Number(listEl.dataset.count || 0) : 0;
+
+    const total = task.subtasks.length;
+    const done = task.subtasks.filter(s => s.done).length;
+    const pct = Math.round((done / total) * 100);
+
+    listEl.innerHTML = `
+      <div class="subtask-progress">
+        <span class="subtask-progress-text">${done} of ${total} done</span>
+        <div class="subtask-progress-track"><div class="subtask-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="subtask-scroll">
+        ${task.subtasks.map(st => `
+          <div class="subtask-row ${st.done ? 'done' : ''}">
+            <label class="subtask-main">
+              <input type="checkbox" class="subtask-checkbox" ${st.done ? 'checked' : ''} data-task-id="${task.id}" data-subtask-id="${st.id}" aria-label="Toggle subtask">
+              <span class="subtask-label">${escapeHTML(st.text)}</span>
+            </label>
+            <button type="button" class="subtask-remove-btn" data-task-id="${task.id}" data-subtask-id="${st.id}" aria-label="Remove subtask">×</button>
+          </div>
+        `).join('')}
+      </div>`;
+
+    listEl.dataset.task = taskId;
+    listEl.dataset.count = String(total);
+
+    // New item added: scroll to it. Otherwise keep the old position.
+    const scroller = listEl.querySelector('.subtask-scroll');
+    scroller.scrollTop = (sameTask && total > prevCount) ? scroller.scrollHeight : prevTop;
+
+    listEl.querySelectorAll('.subtask-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        Tasks.toggleSubtask(cb.getAttribute('data-task-id'), cb.getAttribute('data-subtask-id'));
+        renderModalSubtasks(taskId);
+      });
+    });
+
+    listEl.querySelectorAll('.subtask-remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        Tasks.deleteSubtask(btn.getAttribute('data-task-id'), btn.getAttribute('data-subtask-id'));
+        renderModalSubtasks(taskId);
+      });
+    });
+  }
 
     const stateData = State.getData();
     const task = (stateData.tasks || []).find(t => t.id === taskId);
