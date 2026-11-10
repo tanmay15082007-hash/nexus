@@ -1,285 +1,206 @@
-# 🌌 NEXUS
+# 🛸 NEXUS
 
-> **Holographic Command Deck & Daily Task Operations**  
-> A futuristic, zero-build Progressive Web App (PWA) with a holographic glass aesthetic, an orbital Command Hub, and full offline autonomy.
+A futuristic daily task manager that runs entirely in your browser. No account, no server, no build step. Your data stays on your device. 🔒
 
-[![PWA Ready](https://img.shields.io/badge/PWA-Ready-22d3ee?style=flat-square)](#pwa-installation-guide)
-[![Zero Build](https://img.shields.io/badge/Build-Pure%20Static-10b981?style=flat-square)](#local-testing)
-[![Storage](https://img.shields.io/badge/Storage-nexus__v1-a855f7?style=flat-square)](#data-safety--persistence)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](#license)
+🌐 **Live app:** https://tanmay15082007-hash.github.io/nexus/
 
 ---
 
-## 📑 Table of Contents
-1. [Design Philosophy & Identity](#design-philosophy--identity)
-2. [Key Architecture & The Command Hub](#the-command-hub-central-access)
-3. [Core Feature Breakdown](#core-feature-breakdown)
-4. [Folder & File Structure](#folder--file-structure)
-5. [Local Testing](#local-testing)
-6. [Step-by-Step GitHub Pages Deployment](#step-by-step-github-pages-deployment)
-7. [PWA Installation Guide (Desktop, Android, iOS)](#pwa-installation-guide)
-8. [Comprehensive Manual Test Checklist](#comprehensive-manual-test-checklist)
-9. [Configuration & Rebranding](#configuration--rebranding)
+## ✨ Features
+
+### 📋 Daily planning
+- 🎯 **Today dashboard:** animated progress ring, stat cards (Total, Done, Pending, Overdue), and today's task list only.
+- ⚡ **Smart quick add:** type `gym tomorrow 6pm high #fitness` and NEXUS fills in the date, time, priority and tag. A preview shows what it understood before you add.
+- ⭐ **Focus 3:** pin up to three tasks with the star button. They appear first, shown larger.
+- ✅ **Subtasks, notes, priority and tags** on every task.
+- 🚨 **Overdue strip** and a 🌅 **morning check-in** that offers to move unfinished tasks to today (once per day).
+- ↩️ **Undo** for deleted tasks, deleted routines and transfers.
+- ⇄ **Move to another day** button on each task (works on touch screens).
+
+### 📅 Calendar and week
+- 🗓️ **Calendar:** 7-column month view, colour dots for each task, green glow when a day is fully done, tap any date to view, edit or add tasks.
+- 🧭 **Week board:** seven day lanes, drag tasks between days (desktop).
+- 🔄 **Transfer tasks:** move or copy unfinished tasks from one day, the last 7 days, or all past days to today or any future date.
+
+### 🔁 Recurring routines
+- 📆 Daily, weekdays, weekly (choose the days) and monthly (choose the date), with start and end dates.
+- 🧩 Completion is tracked **per day** (finishing Monday does not finish Tuesday).
+- ✏️ Edit, ⏸️ pause, ▶️ resume and 🗑️ delete routines.
+- 🔥 Streak counter and a 7-day history for each routine.
+- 📦 Compact list: tap a row to open its actions, 🔎 search appears when you have more than 5 routines, and the "new routine" form is collapsed until needed.
+
+### 📊 Insight
+- 📈 **Telemetry (stats):** 7-day bars, a 30-day matrix (calendar-style grid with colour key and tap-for-details), current streak, best streak, completion rate and most productive day.
+- 📝 **Weekly review:** completed, missed, completion rate and best day, plus a day-by-day breakdown. Suggested automatically on Sundays.
+- 🏷️ Progress shown in the browser tab title, for example `(60%) NEXUS`, and as an app badge on supported Android devices.
+
+### 🧰 Lists, tools and comfort
+- 🗒️ **Custom lists:** create, rename, hide, show, reorder and delete lists. Promote an item to today's tasks.
+- ⏱️ **Focus timer:** 25/5 Pomodoro with a ring display.
+- 🔔 **Reminders:** an alert for timed tasks while the app is open, plus system notifications if you allow them.
+- 🧠 **Command Hub:** one place for every feature, grouped as PLAN, TRACK and SYSTEM, with a RECENT row for your last three features.
+- ⌨️ **Command palette:** press `Ctrl + K` (or `Cmd + K`) to jump to any action.
+- 💬 **In-app dialogs** replace the browser's alert, confirm and prompt boxes.
+- ⚙️ **Settings:** name, accent colour 🎨, high-contrast mode, 12 or 24-hour time, week start, sound 🔊, animations and haptic vibration 📳.
+- 💾 **Backup:** export and import JSON (merge or replace) and a double-confirmed reset.
+- ♿ **Accessibility:** focus rings, labels on controls, keyboard control of tasks, reduced-motion support and a high-contrast option.
+
+### 📱 Mobile and install
+- 🧭 Bottom navigation bar (Today, Calendar, Add, Stats, Hub) appears on phones only.
+- 👆 Swipe a task right to complete it and left to delete it (vertical scrolling still works).
+- 📲 **Install as an app (Android):** open the Command Hub and tap **Download NEXUS**. It installs to the home screen and works offline.
+- 🆕 A **New version available** bar appears when an update is published.
 
 ---
 
-## 🛸 Design Philosophy & Identity
+## ⌨️ Keyboard shortcuts (desktop)
 
-**NEXUS** replaces archaic to-do lists and ruled-line planners with a **Holographic Command Deck**:
-- **Aesthetic**: Deep space canvas (`#030712`), cyan (`#22d3ee`) default accents with violet (`#a855f7`) and magenta (`#ec4899`) energy glows, thin gradient borders, and soft glassmorphism blur.
-- **Home = Today Only**: The Home dashboard focuses strictly on Today's mission objectives. Multi-day timelines, custom lists, calendar, and recurring directives live in their own dedicated holographic screens.
-- **Floating Task Rows**: Directives are displayed as sleek floating holographic rows with glowing circular check nodes, priority-colored indicator bars, metadata chips, and animated completion transitions.
-- **Clean Initial State**: NEXUS starts **completely empty** upon first launch (no pre-made demo tasks, no sample lists, no seed data), greeting the user with an actionable empty state.
-- **Boot Sequence**: A brief initialization sequence (`"STARTING NEXUS... READY"`) executes on first load in under 1.2 seconds, easily dismissible with a tap or skip button.
-
----
-
-## 💠 The Command Hub (Central Access)
-
-At the heart of NEXUS is the **Core Orb** — a glowing holographic button floating at the bottom-center on mobile devices and situated in the top command bar on desktop:
-
-1. **12 Radial Orbital Nodes**:
-   - ⦿ **Today**: Return to active home operations.
-   - 📅 **Calendar**: Full month grid with daily completion mini rings and date inspector.
-   - 📊 **Week Board**: Horizontal timeline lanes with inter-day drag-and-drop.
-   - ⇄ **Transfer**: Move or copy incomplete directives from past days.
-   - 🔁 **Recurring**: Configure automated daily, weekday, or monthly routines.
-   - 📋 **Custom Lists**: Manage non-date idea backlogs and collections.
-   - 📈 **Telemetry**: 7-day velocity bar chart, 30-day heatmap, and streak metrics.
-   - ⏱ **Focus Timer**: Holographic 25/5 Pomodoro ring attached to directives.
-   - 🔍 **Search**: Filter directives by query, priority, or completion status.
-   - 💾 **Data & Backup**: Export and import JSON backup snapshots.
-   - ⚙ **Settings**: Configure user moniker, accent colors, time format, and audio synthesizer.
-   - ⌨ **Shortcuts**: Interactive keybindings and command reference.
-
-2. **Command Palette (`Ctrl / Cmd + K`)**:
-   - Access from anywhere via `Ctrl+K` or the search bar inside the Hub.
-   - Fuzzy search and instantly execute actions (`"Add New Directive"`, `"Open Calendar"`, `"Set Holographic Accent: Violet"`, `"Export Telemetry"`, etc.).
-   - Full keyboard navigation with `ArrowUp`, `ArrowDown`, `Enter` to run, and `Esc` to close.
+| Key | Action |
+|---|---|
+| `N` | ➕ New task |
+| `T` | 🏠 Back to Today |
+| `C` | 🗓️ Open calendar |
+| `R` | 🔁 Open recurring routines |
+| `/` | 🔎 Focus search |
+| `Ctrl + K` | ⚡ Command palette |
+| `Ctrl + Z` | ↩️ Undo last delete or transfer |
+| `?` | ❓ Shortcuts help |
+| `Esc` | ❌ Close the open panel |
+| `Space` / `Enter` / `Delete` | On a focused task: complete / edit / remove |
 
 ---
 
-## ⚡ Core Feature Breakdown
-
-### 1. Home Dashboard (Today Only)
-- **Holographic Donut Centerpiece**: SVG percentage gauge with dual counter-rotating segmented rings. Center displays percentage, completion count (`X of Y complete`), and system status. Displays `0%` with an empty ring when no directives are present.
-- **Stat Chips**: Real-time chips for **Total**, **Done**, **Pending**, and **Overdue**.
-- **Overdue Directive Banner**: Automatically detects uncompleted directives from previous days and offers a one-tap **"MOVE TO TODAY"** resolution.
-- **Quick-Add Bar**: Always-accessible input with scheduled time, priority selection, and optional voice input via Web Speech API.
-- **Task Prioritization & Sorting**: Completed directives sink to the bottom with strike-through; pending directives sort chronologically by time, then priority (`Critical` > `High` > `Medium` > `Low`).
-- **Subtask Checkpoints**: In-directive checklists with parent progress chips (`✓ 2/3`).
-
-### 2. Tactical Calendar
-- Month-view grid with daily completion mini rings:
-  - 🟢 **Green Ring**: 100% completed
-  - 🟡 **Amber Ring**: Partially completed
-  - 🔴 **Red Ring**: Missed / overdue past day
-  - 🔵 **Cyan Ring**: Planned future day
-- Select any past, present, or future date to inspect and manage directives for that specific date.
-
-### 3. Transfer Tasks Protocol
-- Three operational modes:
-  1. *Specific past day*: Choose any past date to inspect unfinished tasks.
-  2. *Last week's pending*: Aggregates incomplete tasks from the past 7 days.
-  3. *All pending (all past days)*: Gathers all uncompleted historical directives.
-- Preview checklist with **Select All / Deselect All**.
-- Destination target date picker defaulting to Today, with **any future date** supported.
-- **Move vs. Copy**: Move cleans up the old date; Copy preserves the historical record.
-- Transferred items display a `from YYYY-MM-DD` tag; duplicates are prevented.
-- **1-Click Undo**: Instant toast with an active `Undo` button restores the original state.
-
-### 4. Recurring Routines
-- Add a routine once and it generates dynamically on matching days.
-- Options: Daily, Weekdays (Mon–Fri), Weekly (selected days), and Monthly (day of month).
-- **Independent Per-Date Completion**: Stored in a separate template engine. Completing Monday **never** alters Tuesday.
-- Future dates project routines automatically; past dates prior to `startDate` do not.
-- Deletion/Editing choice: *"This day only"* (adds date exception) vs. *"All future days"* (updates or ends routine).
-- Starts completely empty on first launch.
-
-### 5. Week Board (Horizontal Timeline Lanes)
-- An original multi-day horizon featuring horizontal timeline lanes per day.
-- Shift the 7-day window with `◀ PREV`, `TODAY`, and `NEXT ▶`.
-- Native drag-and-drop moves directives between days.
-- Mini completion badge per lane.
-
-### 6. Custom Lists
-- Non-date-bound collections (Ideas, Groceries, Project Milestones).
-- Starts empty with a friendly empty state.
-- Create, rename, hide, and delete lists.
-- Click `→` on any list item to promote it into a scheduled directive for Today.
-
-### 7. Telemetry & Focus Engine
-- **Velocity Bars**: Inline SVG chart tracking completion rates across the last 7 days.
-- **30-Day Heatmap**: 5-level color matrix visualizing consistency.
-- **Focus Timer**: Holographic Pomodoro countdown ring (25m Focus / 5m Break) attachable to any directive (`TARGET: [NAME]`).
-
----
-
-## 📁 Folder & File Structure
+## 🗂️ Project structure
 
 ```
 nexus/
-├── index.html                  # Single-page application root (GitHub Pages ready)
-├── manifest.json               # Web App Manifest (relative paths, start_url: "./index.html")
-├── sw.js                       # Service Worker (offline precache & runtime caching)
-├── test-nexus.js               # Automated Node.js verification test suite
-├── README.md                   # Complete documentation & test checklist
-│
+├── index.html
+├── manifest.json
+├── sw.js                    Service worker (offline + updates)
+├── README.md
 ├── css/
-│   ├── variables.css           # Color tokens, themes, typography, glassmorphism
-│   ├── base.css                # Deep space canvas, subtle starfield grid, resets
-│   ├── effects.css             # Holographic glass, core orb, donut animations, boot overlay
-│   ├── layout.css              # Command Deck top bar, Home view (Today only), Week Board
-│   └── components.css          # Floating task rows, Command Hub modal, Command Palette, panels
-│
+│   ├── variables.css        Colours, fonts, themes
+│   ├── base.css
+│   ├── effects.css
+│   ├── layout.css           Top bar, home, week board, lists
+│   ├── components.css       Tasks, hub, panels, calendar, bottom nav
+│   └── nexus-ui.css         Dialogs, review, matrix, recurring list, accessibility
 ├── js/
-│   ├── config.js               # ONE config constant: APP_NAME = "NEXUS", STORAGE_KEY = "nexus_v1"
-│   ├── audio.js                # Synthesized Web Audio feedback (chimes, clicks, alerts)
-│   ├── dates.js                # Local date calculations (YYYY-MM-DD), zero timezone drift
-│   ├── storage.js              # Versioned localStorage engine ("nexus_v1"), empty on first run
-│   ├── state.js                # Central state store, observer subscription pattern, undo stack
-│   ├── recurring.js            # Recurring engine, per-date completion, exception management
-│   ├── tasks.js                # Task CRUD, floating row logic, subtasks, overdue resolver, sorting
-│   ├── transfer.js             # Transfer Tasks engine (3 modes, select-all, move/copy, undo)
-│   ├── calendar.js             # Month view calendar panel with daily completion mini rings
-│   ├── charts.js               # Inline SVG holographic donut chart, 7-day velocity bars, heatmap
-│   ├── hub.js                  # The Command Hub: core orb controller, orbital node grid, panels
-│   ├── palette.js              # Command Palette (Ctrl+K): fuzzy search, actions execution
-│   ├── voice.js                # Optional Web Speech API voice input ("add task <title>")
-│   ├── timer.js                # Holographic Pomodoro countdown ring (25/5 min)
-│   ├── pwa.js                  # Service Worker registration, beforeinstallprompt banner
-│   ├── ui.js                   # DOM renderers, drag-and-drop, touch swipe gestures, toast
-│   └── app.js                  # Application bootstrapper, boot sequence, shortcuts
-│
-└── assets/
-    └── icons/
-        ├── favicon.svg         # Holographic nexus diamond/core vector icon
-        ├── icon-192.png        # 192x192 PWA standard & maskable icon
-        └── icon-512.png        # 512x512 PWA high-resolution icon
+│   ├── config.js
+│   ├── audio.js
+│   ├── dates.js
+│   ├── storage.js           localStorage load/save/export/import
+│   ├── state.js             Central state store
+│   ├── recurring.js         Recurring routine engine
+│   ├── tasks.js             Task logic, sorting, undo
+│   ├── transfer.js
+│   ├── calendar.js
+│   ├── charts.js            Progress ring, bars, 30-day matrix, streaks
+│   ├── hub.js               Command Hub
+│   ├── palette.js           Command palette
+│   ├── dialog.js            In-app dialogs
+│   ├── timer.js
+│   ├── pwa.js               Service worker, install, update bar
+│   ├── ui.js                Screens and panels
+│   ├── recurring-ui.js      Compact recurring panel
+│   ├── extras.js            Quick-add parser, Focus 3, reminders, review
+│   └── app.js               Startup and shortcuts
+├── assets/icons/            App icons
+└── tools/                   Optional developer scripts (not needed by the site)
+    ├── generate-icons.js
+    └── test-nexus.js
 ```
+
+⚠️ Script order in `index.html` matters. `recurring-ui.js` loads right after `ui.js`, and `extras.js` after that.
 
 ---
 
-## 💻 Local Testing
+## 💻 Run it locally
 
-Because NEXUS requires **no npm dependencies and no build step**, you can test it locally in two ways:
+The install and offline features need `http://localhost` or HTTPS. Opening `index.html` directly works for viewing, but not for install.
 
-### Method 1: Double-Click `index.html` (Zero Setup)
-1. Open the project folder in your file explorer.
-2. Double-click `index.html` to open it directly in any modern browser.
-3. Full localStorage persistence, Command Hub, Command Palette, and views operate immediately.  
-   *(Note: Service Worker offline caching requires an HTTP origin, as browsers disable Service Workers over the `file:///` protocol).*
-
-### Method 2: Local HTTP Server (Recommended for PWA)
-Run any local static server from the project directory:
-
-**Using Python 3:**
 ```bash
-python -m http.server 8080
+# in the project folder, pick one
+python -m http.server 8000
+npx serve
 ```
 
-**Using Node.js (`npx`):**
+Then open `http://localhost:8000`.
+
+🧪 Optional checks:
+
 ```bash
-npx serve -l 8080
-```
-
-Open your browser to:
-```
-http://localhost:8080
+node tools/test-nexus.js
 ```
 
 ---
 
-## 🚀 Step-by-Step GitHub Pages Deployment
+## 🚀 Deploy to GitHub Pages
 
-All script imports, stylesheet links, manifest paths, and service worker caches are **strictly relative** (`./css/...`, `./js/...`, `./assets/...`), ensuring 100% compatibility with GitHub Pages sub-paths:
+1. 📁 Create a public repository, for example `nexus`.
+2. ⬆️ Upload the project so `index.html` is at the **root** (drag the `css`, `js` and `assets` folders in too).
+3. ⚙️ Go to **Settings → Pages**.
+4. 🌿 Source: **Deploy from a branch**. Branch: **main**. Folder: **/ (root)**. Save.
+5. ⏳ After about a minute your site is live at `https://<username>.github.io/<repo>/`.
 
-1. **Create GitHub Repository**:
-   - Sign in to [GitHub](https://github.com) and click **New Repository**.
-   - Name it `nexus` (or your preferred name).
-   - Set visibility to **Public**.
-2. **Push or Upload Project Files**:
-   - Using Git:
-     ```bash
-     git init
-     git add .
-     git commit -m "Initialize NEXUS Command Deck"
-     git branch -M main
-     git remote add origin https://github.com/<username>/nexus.git
-     git push -u origin main
-     ```
-   - *Or upload via browser*: Click **Add file > Upload files**, drag in all files and folders, and commit.
-3. **Configure Pages**:
-   - Go to your repository's **Settings > Pages**.
-   - Under **Build and deployment > Source**, select **Deploy from a branch**.
-   - Under **Branch**, select `main` and folder `/ (root)`, then click **Save**.
-4. **Launch Application**:
-   - In 1–2 minutes, your web app will be live at:
-     ```
-     https://<username>.github.io/nexus/
-     ```
+All paths in the project are relative, so it works from a sub-path like `/nexus/`.
+
+### 🔄 Publishing updates
+
+1. ✏️ Change your files.
+2. 🔢 Raise the version in `sw.js`, for example `nexus-v2.3.1`. Without this, phones keep showing the old cached version.
+3. 📦 Upload every changed file in **one commit** (several quick commits cancel each other's builds).
+4. ✅ Wait for the green check under **Actions**.
+5. 🔁 Reopen the app. Installed apps show the **New version available** bar; tap **Tap to refresh**.
+
+❌ A red cross next to a commit usually means that build was cancelled by a newer commit. Open **Details** to confirm.
 
 ---
 
-## 📲 PWA Installation Guide
+## 📲 Install as an app
 
-### On Desktop (Chrome / Edge / Brave):
-1. Navigate to the deployed site or local server.
-2. Click the **Install** icon in the browser address bar (or click **"Install App"** on the bottom banner).
-3. Confirm installation. NEXUS launches in a dedicated, borderless window with dock integration.
-
-### On Android (Chrome):
-1. Open the site in Chrome.
-2. The bottom install banner will appear: tap **"Install App"**.
-3. Alternatively, tap the browser menu `⋮` and select **"Add to Home screen"**.
-4. The NEXUS icon appears on your home screen and app drawer, launching fullscreen offline.
-
-### On iOS (Safari):
-1. Open the site in Safari.
-2. Tap the **Share** button (box with an upward arrow).
-3. Scroll down and tap **"Add to Home Screen"**.
-4. Tap **Add** in the top-right corner.
+- 🤖 **Android (Chrome):** open the site, wait a few seconds, open the Command Hub (Hub button) and tap **Download NEXUS**.
+- 🍎 **iPhone:** Safari does not offer an install prompt. Use Share → Add to Home Screen.
+- 🖥️ **Desktop Chrome, Edge or Brave:** use the install icon in the address bar.
 
 ---
 
-## 🧪 Comprehensive Manual Test Checklist
+## 🔐 Your data
 
-| Protocol / Feature | Test Procedure | Expected Result | Status |
-| :--- | :--- | :--- | :---: |
-| **1. Empty First-Run State** | Clear browser storage (`localStorage.clear()`) and load `index.html`. | App loads with 0 tasks, 0 recurring routines, 0 lists. Friendly empty state displayed: *"No tasks for today. Tap + to add your first one."* | Verified |
-| **2. Home Shows Today Only** | Inspect the Home screen view. | Displays today's date header, donut chart, stat chips, and today's directives. No multi-day columns or custom lists on Home. | Verified |
-| **3. Donut Chart Updates** | Add a task for today and toggle its completion node. | Donut chart smoothly animates from 0% to 100%, updating central count (`1 of 1 complete`) with a particle burst. | Verified |
-| **4. Command Hub Radial Nodes** | Click the floating Core Orb or press `Ctrl+K`. | Full-screen holographic Command Hub opens displaying all 12 orbital nodes with icons, labels, and hints. | Verified |
-| **5. Command Palette (`Ctrl+K`)** | Press `Ctrl+K` and type `"transfer"`, then press `Enter`. | Fuzzy search filters commands; pressing Enter executes the action and opens the Transfer panel. | Verified |
-| **6. Calendar Month Browsing** | Open Calendar via Hub or top bar (`C`). Navigate months and select any past or future date. | Month grid shows mini completion rings per day; selecting a date opens the day inspector to view and manage tasks for that day. | Verified |
-| **7. Transfer Mode A (Specific Day)** | Open Transfer Tasks. Select "From a specific day" and pick a past date with incomplete tasks. | Displays eligible unfinished directives from that date with select-all toggle. | Verified |
-| **8. Transfer Mode B (Last Week)** | Select "Last week's pending" in Transfer Tasks. | Displays all incomplete directives from the preceding 7 days. | Verified |
-| **9. Transfer Mode C (All Past)** | Select "All pending (all past days)" in Transfer Tasks. | Aggregates all unfinished directives from all previous dates. | Verified |
-| **10. Future Target Date & Undo** | In Transfer Tasks, choose a future date, select "Move", and execute. | Directives move to the future date with a `from YYYY-MM-DD` tag; Undo toast appears and reverts the move on click. | Verified |
-| **11. Recurring Per-Date Tracking** | Create a daily recurring routine. Mark it complete on Today, then inspect Tomorrow. | Today shows complete (100%), while Tomorrow remains pending (0%). No cross-day leakage occurs. | Verified |
-| **12. Persistence After Refresh** | Add directives and custom list items, then reload the page (`F5`). | All directives, lists, and completion states persist identically from `localStorage`. | Verified |
-| **13. JSON Export & Import** | Export a backup JSON from Settings, make an edit, then import with "Merge". | Backup file downloads cleanly; import merges directives without data loss. | Verified |
-| **14. Offline Autonomy** | Serve via server, open DevTools Network tab, enable **Offline**, and reload. | Service Worker serves cached assets; app remains fully interactive offline. | Verified |
-| **15. Mobile Layout at 375px** | Resize viewport or toggle Device Toolbar to iPhone SE (375px width). | Layout adapts: compact header, centerpiece card, 2x2 stat chips, floating Core Orb at bottom center, and bottom install banner. | Verified |
+- 💾 Everything is stored in your browser's `localStorage`. Nothing is sent anywhere.
+- 🔀 Data **does not sync** between your phone and laptop. Use **Settings → Data & Backup → Export JSON** and Import to move it.
+- ⚠️ Clearing site data deletes your tasks. Export a backup now and then.
+- 📌 Pins (Focus 3), reminder records and the Recent hub row are stored separately and are not part of the JSON export.
+- 🌱 The app starts completely empty. There is no demo data.
 
 ---
 
-## ⚙ Configuration & Rebranding
+## 🚧 Limits
 
-NEXUS is designed so its name and core parameters live in **ONE single configuration constant**:
-
-```javascript
-// file: js/config.js
-window.NexusApp.Config = {
-  APP_NAME: 'NEXUS', // Change this single constant to rebrand the entire application
-  APP_SUBTITLE: 'Holographic Command Deck & Task Operations',
-  STORAGE_KEY: 'nexus_v1',
-  SCHEMA_VERSION: 1,
-  // ...
-};
-```
+- 🔔 **Reminders** fire only while the app is open or running in the background. True push reminders when the app is closed need a server.
+- 🏷️ The **app badge** needs an installed app on a browser that supports it.
+- 🖱️ Dragging tasks between days works with a mouse. On touch screens use the **move** (⇄) button.
+- 🗣️ The quick-add parser treats words like "sun" or "mon" as weekdays. Check the preview chips before adding.
+- ↩️ Undoing a transfer restores a snapshot, so tasks added after the transfer are removed by that undo.
 
 ---
 
-## 📜 License
-MIT License. Built for focused daily operational clarity.
+## 🛠️ Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| 🕰️ Page looks old after an update | Raise `CACHE_NAME` in `sw.js`, hard refresh (`Ctrl + Shift + R`), close and reopen the app |
+| 🎨 Panels look unstyled | Check that `css/nexus-ui.css` exists and is linked in `index.html` |
+| 🐞 Red errors in the console | Press `F12`, open Console, and check which file the error names |
+| 📲 Download card missing | Use Chrome on Android, open the hosted https link, wait a few seconds. It is hidden once installed |
+| 🚫 Missing file on the live site | Open the file's URL directly. A 404 means it did not upload |
+
+---
+
+## 🧱 Tech
+
+Plain HTML, CSS and JavaScript. No framework, no build step, no external API calls. Charts are inline SVG. Offline support comes from a service worker that caches every file listed in `sw.js`.
+
+---
+
+🛸 Built with curiosity. Keep shipping! 🚀
