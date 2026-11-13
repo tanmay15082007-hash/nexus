@@ -246,20 +246,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offs
 }
 
 
-/* ============ Task rows: compact, tap to expand ============ */
-.nexus-floating-task { flex-wrap: wrap; align-items: flex-start; }
-.nexus-floating-task .check-node { margin-top: 2px; }
-.nexus-floating-task .task-info-body { flex: 1 1 0; min-width: 0; }
-.task-chip { white-space: nowrap; }
-.task-chevron { flex-shrink: 0; margin-top: 3px; color: var(--text-dim); font-size: 14px; transition: transform 0.15s; }
-.nexus-floating-task.is-expanded .task-chevron { transform: rotate(180deg); }
-.nexus-floating-task.is-expanded { border-color: var(--primary); }
-
-.task-expand {
-  flex: 0 0 100%; margin-top: 10px; padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.task-expand .task-row-tools { opacity: 1; justify-content: space-between; gap: 4px; margin-top: 8px; }
+-row-tools { opacity: 1; justify-content: space-between; gap: 4px; margin-top: 8px; }
 .task-expand .row-tool-btn { width: 44px; height: 40px; font-size: 16px; }
 
 .tx-sub-list {
