@@ -16,6 +16,10 @@ window.NexusApp.UI = (function() {
   let toastTimer = null;
   let draggedTaskId = null;
   let draggedSourceDate = null;
+  function toggleTaskExpand(taskId) {
+    expandedTaskId = (expandedTaskId === taskId) ? null : taskId;
+    State.commit('taskExpand');   // re-renders every view that shows tasks
+  }
 
   function init() {
     setupScreenRouter();
@@ -477,15 +481,42 @@ window.NexusApp.UI = (function() {
   /* ========================================================================
      FLOATING TASK ROW COMPONENT
      ======================================================================== */
-  function renderTaskFloatingRow(task, dateStr, context = 'home') {
+   function renderTaskFloatingRow(task, dateStr, context = 'home') {
     const isRecurring = Boolean(task.isRecurringInstance || task.recurringId);
     const subtaskStats = Tasks.getSubtaskStats(task);
     const settings = State.getSettings();
     const formattedTime = task.time ? Dates.formatTime(task.time, settings.timeFormat) : '';
     const pinned = Boolean(window.NexusApp.Extras && window.NexusApp.Extras.isPinned(task.id, dateStr));
+    const expanded = expandedTaskId === task.id;
+    const subs = task.subtasks || [];
+
+    let expandHtml = '';
+    if (expanded) {
+      const subsHtml = subs.length
+        ? `<div class="tx-sub-list">${subs.map(st => `
+            <label class="tx-sub ${st.done ? 'is-done' : ''}">
+              <input type="checkbox" class="tx-sub-check" ${st.done ? 'checked' : ''} data-task-id="${task.id}" data-subtask-id="${st.id}" aria-label="Toggle checkpoint">
+              <span>${escapeHTML(st.text)}</span>
+            </label>`).join('')}</div>`
+        : `<div class="tx-sub-empty">${isRecurring ? 'Recurring tasks have no checkpoints.' : 'No checkpoints yet. Tap ✎ to add some.'}</div>`;
+
+      expandHtml = `
+        <div class="task-expand">
+          ${subsHtml}
+          <div class="task-row-tools">
+            <button type="button" class="row-tool-btn pin-btn ${pinned ? 'is-on' : ''}" data-task-id="${task.id}" data-date="${dateStr}" aria-pressed="${pinned}" title="Pin to Focus 3" aria-label="Pin to Focus 3">★</button>
+            ${!isRecurring ? `<button type="button" class="row-tool-btn move-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Move to another day" aria-label="Move to another day">⇄</button>` : ''}
+            <button type="button" class="row-tool-btn timer-btn" data-task-id="${task.id}" title="Focus on this directive" aria-label="Timer">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </button>
+            <button type="button" class="row-tool-btn edit-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Edit directive" aria-label="Edit">✎</button>
+            <button type="button" class="row-tool-btn delete-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Remove directive" aria-label="Delete">×</button>
+          </div>
+        </div>`;
+    }
 
     return `
-      <div class="nexus-floating-task priority-${task.priority || 'medium'} ${task.done ? 'is-completed' : ''} ${pinned ? 'is-pinned' : ''}"
+      <div class="nexus-floating-task priority-${task.priority || 'medium'} ${task.done ? 'is-completed' : ''} ${pinned ? 'is-pinned' : ''} ${expanded ? 'is-expanded' : ''}"
            data-task-id="${task.id}" data-date="${dateStr}" draggable="true" tabindex="0">
 
         <button type="button" class="check-node ${task.done ? 'checked' : ''}"
@@ -496,7 +527,7 @@ window.NexusApp.UI = (function() {
           </svg>
         </button>
 
-        <div class="task-info-body" data-task-id="${task.id}">
+        <div class="task-info-body" data-task-id="${task.id}" aria-expanded="${expanded}">
           <div class="task-title-line">
             <span class="task-title-text">${escapeHTML(task.title)}</span>
           </div>
@@ -534,30 +565,23 @@ window.NexusApp.UI = (function() {
           </div>
         </div>
 
-        <div class="task-row-tools">
-          <button type="button" class="row-tool-btn pin-btn ${pinned ? 'is-on' : ''}" data-task-id="${task.id}" data-date="${dateStr}" aria-pressed="${pinned}" title="Pin to Focus 3" aria-label="Pin to Focus 3">★</button>
-          ${!isRecurring ? `<button type="button" class="row-tool-btn move-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Move to another day" aria-label="Move to another day">⇄</button>` : ''}
-          <button type="button" class="row-tool-btn timer-btn" data-task-id="${task.id}" title="Focus on this directive" aria-label="Timer">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </button>
-          <button type="button" class="row-tool-btn edit-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Edit directive" aria-label="Edit">✎</button>
-          <button type="button" class="row-tool-btn delete-btn" data-task-id="${task.id}" data-date="${dateStr}" title="Remove directive" aria-label="Delete">×</button>
-        </div>
+        <span class="task-chevron" aria-hidden="true">▾</span>
+        ${expandHtml}
       </div>
     `;
   }
-
+  
   function attachTaskRowListeners(container) {
-    container.querySelectorAll('.check-node').forEach(node => {
-      node.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const taskId = node.getAttribute('data-task-id');
-        const dateStr = node.getAttribute('data-date');
-        if (taskId && dateStr) {
-          const rect = node.getBoundingClientRect();
-          triggerParticleBurst(rect.left + rect.width / 2, rect.top + rect.height / 2);
-          Tasks.toggleTaskDone(taskId, dateStr);
-        }
+    container.querySelectorAll('.task-info-body').forEach(body => {
+      body.addEventListener('click', () => {
+        const taskId = body.getAttribute('data-task-id');
+        if (taskId) toggleTaskExpand(taskId);
+      });
+    });
+
+    container.querySelectorAll('.tx-sub-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        Tasks.toggleSubtask(cb.getAttribute('data-task-id'), cb.getAttribute('data-subtask-id'));
       });
     });
 
@@ -1148,7 +1172,8 @@ window.NexusApp.UI = (function() {
     });
   }
 
-  function setupTouchGestures() {
+
+function setupTouchGestures() {
     let row = null, startX = 0, startY = 0, locked = false;
 
     function reset() {
@@ -1159,7 +1184,10 @@ window.NexusApp.UI = (function() {
 
     document.addEventListener('touchstart', (e) => {
       const r = e.target.closest('.nexus-floating-task');
-      if (!r || e.target.closest('button, input, select, textarea, a')) { row = null; return; }
+      if (!r || e.target.closest('button, input, select, textarea, a, label, .task-expand')) {
+        row = null;
+        return;
+      }
       row = r; locked = false;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
@@ -1170,8 +1198,11 @@ window.NexusApp.UI = (function() {
       const dx = e.touches[0].clientX - startX;
       const dy = e.touches[0].clientY - startY;
       if (!locked) {
-        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { reset(); row = null; return; }
-        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) locked = true; else return;
+        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+          reset(); row = null; return;
+        }
+        if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) locked = true;
+        else return;
       }
       row.classList.add('is-swiping');
       row.style.transform = `translateX(${Math.max(-120, Math.min(120, dx))}px)`;
@@ -1194,8 +1225,11 @@ window.NexusApp.UI = (function() {
       }
     }, { passive: true });
 
-    document.addEventListener('touchcancel', () => { reset(); row = null; locked = false; }, { passive: true });
-  }
+    document.addEventListener('touchcancel', () => {
+      reset(); row = null; locked = false;
+    }, { passive: true });
+}
+
 
   function triggerParticleBurst(x, y) {
     const s = State.getSettings();
