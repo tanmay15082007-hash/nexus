@@ -3,7 +3,7 @@
  * Offline enabled. Relative paths only, for GitHub Pages sub-path hosting.
  */
 
-const CACHE_NAME = 'nexus-v2.4.2';
+const CACHE_NAME = 'nexus-v2.5.0';
 
 const PRECACHE_ASSETS = [
   './',
